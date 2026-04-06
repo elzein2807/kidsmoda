@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "dependencies": {
+    "@neondatabase/serverless": "^1.0.2",
+    "@vercel/blob": "^2.3.3",
     "cloudinary": "^2.9.0",
     "concurrently": "^9.2.1",
     "cors": "^2.8.6",

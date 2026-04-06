@@ -9,10 +9,10 @@ const app = express();
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'ahmadangelina2824';
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 // ============================================================
-// DATA LAYER — MongoDB in production, JSON files locally
+// DATA LAYER — Neon Postgres in production, JSON files locally
 // ============================================================
 let db = null;
 let Product, Order;
@@ -20,30 +20,123 @@ let Product, Order;
 async function initDB() {
   if (db) return;
 
-  if (process.env.MONGODB_URI) {
-    const mongoose = require('mongoose');
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log('MongoDB connected');
+  if (process.env.POSTGRES_URL || process.env.DATABASE_URL) {
+    const { neon } = require('@neondatabase/serverless');
+    const sql = neon(process.env.POSTGRES_URL || process.env.DATABASE_URL);
 
-    const ProductSchema = new mongoose.Schema({
-      name: String, description: { type: String, default: '' }, price: Number,
-      category: String, sizes: [String], quantity: { type: Number, default: 0 },
-      safety: { type: String, default: 'CE certified. Non-toxic materials. Tested for child safety.' },
-      material: { type: String, default: '' }, image: { type: String, default: '' },
-      inStock: { type: Boolean, default: true }, createdAt: { type: Date, default: Date.now },
-    });
-    const OrderSchema = new mongoose.Schema({
-      items: [{ productId: String, name: String, price: Number, image: String, size: String, quantity: Number }],
-      customer: { name: String, email: String, phone: String, address: String, city: String, country: String, payment: String },
-      total: Number, status: { type: String, default: 'pending' }, stripeSessionId: String,
-      createdAt: { type: Date, default: Date.now },
-    });
+    // Create tables
+    await sql`CREATE TABLE IF NOT EXISTS products (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      price NUMERIC NOT NULL,
+      category TEXT NOT NULL,
+      sizes TEXT[] DEFAULT '{}',
+      quantity INTEGER DEFAULT 0,
+      safety TEXT DEFAULT 'CE certified. Non-toxic materials. Tested for child safety.',
+      material TEXT DEFAULT '',
+      image TEXT DEFAULT '',
+      in_stock BOOLEAN DEFAULT true,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )`;
 
-    Product = mongoose.models.Product || mongoose.model('Product', ProductSchema);
-    Order = mongoose.models.Order || mongoose.model('Order', OrderSchema);
-    db = 'mongo';
+    await sql`CREATE TABLE IF NOT EXISTS orders (
+      id TEXT PRIMARY KEY,
+      items JSONB NOT NULL,
+      customer JSONB NOT NULL,
+      total NUMERIC NOT NULL,
+      status TEXT DEFAULT 'pending',
+      stripe_session_id TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )`;
+
+    Product = {
+      find: async (filter) => {
+        let rows;
+        if (filter && filter.category) {
+          rows = await sql`SELECT * FROM products WHERE category = ${filter.category} ORDER BY created_at DESC`;
+        } else {
+          rows = await sql`SELECT * FROM products ORDER BY created_at DESC`;
+        }
+        return rows.map(r => ({
+          _id: r.id, id: r.id, name: r.name, description: r.description,
+          price: parseFloat(r.price), category: r.category, sizes: r.sizes || [],
+          quantity: r.quantity, safety: r.safety, material: r.material,
+          image: r.image, inStock: r.in_stock, createdAt: r.created_at,
+        }));
+      },
+      findById: async (id) => {
+        const rows = await sql`SELECT * FROM products WHERE id = ${id}`;
+        if (rows.length === 0) return null;
+        const r = rows[0];
+        return {
+          _id: r.id, id: r.id, name: r.name, description: r.description,
+          price: parseFloat(r.price), category: r.category, sizes: r.sizes || [],
+          quantity: r.quantity, safety: r.safety, material: r.material,
+          image: r.image, inStock: r.in_stock, createdAt: r.created_at,
+        };
+      },
+      create: async (data) => {
+        const id = uuidv4();
+        await sql`INSERT INTO products (id, name, description, price, category, sizes, quantity, safety, material, image, in_stock)
+          VALUES (${id}, ${data.name}, ${data.description || ''}, ${data.price}, ${data.category},
+          ${data.sizes || []}, ${data.quantity || 0}, ${data.safety || 'CE certified. Non-toxic materials.'},
+          ${data.material || ''}, ${data.image || ''}, ${data.inStock !== false})`;
+        return { _id: id, id, ...data, createdAt: new Date().toISOString() };
+      },
+      findByIdAndUpdate: async (id, update) => {
+        const current = await Product.findById(id);
+        if (!current) return null;
+        const merged = { ...current, ...update };
+        await sql`UPDATE products SET
+          name = ${merged.name}, description = ${merged.description || ''}, price = ${merged.price},
+          category = ${merged.category}, sizes = ${merged.sizes || []}, quantity = ${merged.quantity || 0},
+          safety = ${merged.safety || ''}, material = ${merged.material || ''},
+          image = ${merged.image || current.image || ''}, in_stock = ${merged.inStock !== false}
+          WHERE id = ${id}`;
+        return { ...merged, _id: id, id };
+      },
+      findByIdAndDelete: async (id) => {
+        await sql`DELETE FROM products WHERE id = ${id}`;
+      },
+    };
+
+    Order = {
+      find: async () => {
+        const rows = await sql`SELECT * FROM orders ORDER BY created_at DESC`;
+        return rows.map(r => ({
+          _id: r.id, id: r.id, items: r.items, customer: r.customer,
+          total: parseFloat(r.total), status: r.status, stripeSessionId: r.stripe_session_id,
+          createdAt: r.created_at,
+        }));
+      },
+      findOne: async (filter) => {
+        const rows = await sql`SELECT * FROM orders WHERE stripe_session_id = ${filter.stripeSessionId}`;
+        if (rows.length === 0) return null;
+        const r = rows[0];
+        return { _id: r.id, id: r.id, items: r.items, customer: r.customer, total: parseFloat(r.total), status: r.status, createdAt: r.created_at };
+      },
+      create: async (data) => {
+        const id = uuidv4();
+        await sql`INSERT INTO orders (id, items, customer, total, status, stripe_session_id)
+          VALUES (${id}, ${JSON.stringify(data.items)}, ${JSON.stringify(data.customer)}, ${data.total}, ${data.status || 'pending'}, ${data.stripeSessionId || null})`;
+        return { _id: id, id, ...data, status: data.status || 'pending', createdAt: new Date().toISOString() };
+      },
+      findByIdAndUpdate: async (id, update) => {
+        if (update.status) {
+          await sql`UPDATE orders SET status = ${update.status} WHERE id = ${id}`;
+        }
+        const rows = await sql`SELECT * FROM orders WHERE id = ${id}`;
+        if (rows.length === 0) return null;
+        const r = rows[0];
+        return { _id: r.id, id: r.id, items: r.items, customer: r.customer, total: parseFloat(r.total), status: r.status, createdAt: r.created_at };
+      },
+    };
+
+    db = 'postgres';
+    console.log('Neon Postgres connected');
   } else {
-    // JSON file fallback
+    // JSON file fallback for local dev
     const DATA_DIR = path.join(__dirname, 'data');
     const readJSON = (f) => { try { return JSON.parse(fs.readFileSync(path.join(DATA_DIR, f), 'utf-8')); } catch { return []; } };
     const writeJSON = (f, d) => fs.writeFileSync(path.join(DATA_DIR, f), JSON.stringify(d, null, 2));
@@ -52,26 +145,37 @@ async function initDB() {
       find: (filter) => { let items = readJSON('products.json'); if (filter && filter.category) items = items.filter(p => p.category === filter.category); return Promise.resolve(items.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt))); },
       findById: (id) => { const items = readJSON('products.json'); return Promise.resolve(items.find(p => p.id === id) || null); },
       create: (data) => { const items = readJSON('products.json'); const item = { id: uuidv4(), _id: uuidv4(), ...data, createdAt: new Date().toISOString() }; item._id = item.id; items.push(item); writeJSON('products.json', items); return Promise.resolve(item); },
-      findByIdAndUpdate: (id, update, opts) => { const items = readJSON('products.json'); const idx = items.findIndex(p => p.id === id); if (idx === -1) return Promise.resolve(null); items[idx] = { ...items[idx], ...update }; writeJSON('products.json', items); return Promise.resolve(items[idx]); },
+      findByIdAndUpdate: (id, update) => { const items = readJSON('products.json'); const idx = items.findIndex(p => p.id === id); if (idx === -1) return Promise.resolve(null); items[idx] = { ...items[idx], ...update }; writeJSON('products.json', items); return Promise.resolve(items[idx]); },
       findByIdAndDelete: (id) => { let items = readJSON('products.json'); items = items.filter(p => p.id !== id); writeJSON('products.json', items); return Promise.resolve(); },
     };
     Order = {
       find: () => { return Promise.resolve(readJSON('orders.json').sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt))); },
       findOne: (filter) => { const items = readJSON('orders.json'); return Promise.resolve(items.find(o => o.stripeSessionId === filter.stripeSessionId) || null); },
       create: (data) => { const items = readJSON('orders.json'); const item = { id: uuidv4(), _id: uuidv4(), ...data, status: data.status || 'pending', createdAt: new Date().toISOString() }; item._id = item.id; items.push(item); writeJSON('orders.json', items); return Promise.resolve(item); },
-      findByIdAndUpdate: (id, update, opts) => { const items = readJSON('orders.json'); const idx = items.findIndex(o => o.id === id); if (idx === -1) return Promise.resolve(null); items[idx] = { ...items[idx], ...update }; writeJSON('orders.json', items); return Promise.resolve(items[idx]); },
+      findByIdAndUpdate: (id, update) => { const items = readJSON('orders.json'); const idx = items.findIndex(o => o.id === id); if (idx === -1) return Promise.resolve(null); items[idx] = { ...items[idx], ...update }; writeJSON('orders.json', items); return Promise.resolve(items[idx]); },
     };
     db = 'json';
-    console.log('Using JSON file storage (no MONGODB_URI)');
+    console.log('Using JSON file storage (no POSTGRES_URL)');
   }
 }
 
 // ============================================================
-// IMAGE UPLOAD — Cloudinary in production, local files locally
+// IMAGE UPLOAD — base64 in production, local files locally
 // ============================================================
 let uploadHandler;
 
-if (process.env.CLOUDINARY_CLOUD_NAME) {
+if (process.env.POSTGRES_URL || process.env.DATABASE_URL) {
+  // Production: store as base64 data URI in database
+  uploadHandler = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
+
+  async function uploadImage(req) {
+    if (!req.file) return '';
+    const base64 = req.file.buffer.toString('base64');
+    const mime = req.file.mimetype;
+    return `data:${mime};base64,${base64}`;
+  }
+  app._uploadImage = uploadImage;
+} else if (process.env.CLOUDINARY_CLOUD_NAME) {
   const cloudinary = require('cloudinary').v2;
   cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -92,6 +196,7 @@ if (process.env.CLOUDINARY_CLOUD_NAME) {
   }
   app._uploadImage = uploadImage;
 } else {
+  // Local dev: disk storage
   const uploadsDir = path.join(__dirname, 'uploads');
   if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
   app.use('/uploads', express.static(uploadsDir));

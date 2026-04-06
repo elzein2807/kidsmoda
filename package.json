@@ -1,0 +1,39 @@
+{
+  "name": "kidsmoda",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "cloudinary": "^2.9.0",
+    "concurrently": "^9.2.1",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "lucide-react": "^0.383.0",
+    "mongoose": "^9.4.1",
+    "multer": "^2.1.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^7.14.0",
+    "react-scripts": "5.0.1",
+    "stripe": "^22.0.0",
+    "uuid": "^13.0.0"
+  },
+  "proxy": "http://localhost:5000",
+  "scripts": {
+    "start": "concurrently \"node server/server.js\" \"react-scripts start\"",
+    "start:client": "react-scripts start",
+    "start:server": "node server/server.js",
+    "build": "react-scripts build"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}

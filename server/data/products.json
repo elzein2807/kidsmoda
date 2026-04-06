@@ -1,0 +1,19 @@
+[
+  {
+    "id": "9a41e8be-ee80-422b-9b9e-525c91a99e04",
+    "_id": "9a41e8be-ee80-422b-9b9e-525c91a99e04",
+    "name": "test",
+    "description": "",
+    "price": 11,
+    "category": "boys",
+    "sizes": [
+      "S"
+    ],
+    "quantity": 5,
+    "safety": "CE certified. Non-toxic materials. Tested for child safety.",
+    "material": "",
+    "image": "/uploads/c2f4f418-eed0-4e22-8146-37aa30b8e7be.jpg",
+    "inStock": true,
+    "createdAt": "2026-04-06T19:03:52.001Z"
+  }
+]

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { LogOut, Plus, Trash2, Edit3, Package, ShoppingCart, Phone, Mail, MapPin, User } from 'lucide-react';
 
-const API = process.env.REACT_APP_API || 'http://localhost:5000';
+const API = process.env.REACT_APP_API || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : '');
 
 const CATEGORIES = [
   { value: 'shoes', label: 'Shoes' },

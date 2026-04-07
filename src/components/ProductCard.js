@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-const API = process.env.REACT_APP_API || 'http://localhost:5000';
+const API = process.env.REACT_APP_API || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : '');
 
 export default function ProductCard({ product }) {
   const isCloudinary = product.image && product.image.startsWith('http');

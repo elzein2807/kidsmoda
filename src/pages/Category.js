@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 
-const API = process.env.REACT_APP_API || 'http://localhost:5000';
+const API = process.env.REACT_APP_API || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : '');
 
 const LABELS = {
   shoes: 'Shoes',

@@ -12,7 +12,7 @@ import Checkout from './pages/Checkout';
 import Admin from './pages/Admin';
 import './App.css';
 
-const API = process.env.REACT_APP_API || 'http://localhost:5000';
+const API = process.env.REACT_APP_API || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : '');
 
 function AdminFloatingButton() {
   const [open, setOpen] = useState(false);

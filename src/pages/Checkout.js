@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 
-const API = process.env.REACT_APP_API || 'http://localhost:5000';
+const API = process.env.REACT_APP_API || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : '');
 
 const PAYMENT_METHODS = [
   { value: 'cod', label: 'Cash on Delivery' },

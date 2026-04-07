@@ -4,7 +4,7 @@ import { ShoppingBag, Shield, Truck, CreditCard, Plus, Minus } from 'lucide-reac
 import { useCart } from '../context/CartContext';
 import ProductCard from '../components/ProductCard';
 
-const API = process.env.REACT_APP_API || 'http://localhost:5000';
+const API = process.env.REACT_APP_API || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : '');
 
 export default function Product() {
   const { id } = useParams();

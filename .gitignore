@@ -3,3 +3,6 @@ build/
 .env
 server/uploads/
 .vercel
+
+.vercel
+.env*.local

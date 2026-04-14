@@ -166,14 +166,23 @@ async function initDB() {
 let uploadHandler;
 
 if (process.env.POSTGRES_URL || process.env.DATABASE_URL) {
-  // Production: store as base64 data URI in database
-  uploadHandler = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
+  // Production: compress HEAVILY, then store as base64 data URI in Postgres.
+  // Neon serverless has a 64MB response cap — large base64 blobs break /api/products.
+  // Jimp is pure JS so it works on Vercel serverless without native-binary pain.
+  uploadHandler = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
   async function uploadImage(req) {
     if (!req.file) return '';
-    const base64 = req.file.buffer.toString('base64');
-    const mime = req.file.mimetype;
-    return `data:${mime};base64,${base64}`;
+    const { Jimp, JimpMime } = require('jimp');
+    const img = await Jimp.read(req.file.buffer);
+    // Resize so the longer edge is at most 600px (preserves aspect ratio)
+    if (img.width > img.height) {
+      if (img.width > 600) img.resize({ w: 600 });
+    } else {
+      if (img.height > 600) img.resize({ h: 600 });
+    }
+    const buf = await img.getBuffer(JimpMime.jpeg, { quality: 70 });
+    return `data:image/jpeg;base64,${buf.toString('base64')}`;
   }
   app._uploadImage = uploadImage;
 } else if (process.env.CLOUDINARY_CLOUD_NAME) {
@@ -302,6 +311,18 @@ app.put('/api/products/:id', requireAdmin, upload.single('image'), async (req, r
 app.delete('/api/products/:id', requireAdmin, async (req, res) => {
   try { await Product.findByIdAndDelete(req.params.id); res.json({ success: true }); }
   catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// One-shot purge — clears all products. Used to recover from oversized-base64 bloat.
+app.post('/api/products/_purge', requireAdmin, async (req, res) => {
+  try {
+    if (db === 'postgres') {
+      const { neon } = require('@neondatabase/serverless');
+      const sql = neon(process.env.POSTGRES_URL || process.env.DATABASE_URL);
+      await sql`DELETE FROM products`;
+    }
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // Orders

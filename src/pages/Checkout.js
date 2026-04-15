@@ -15,9 +15,22 @@ export default function Checkout() {
   const [form, setForm] = useState({ name: '', email: '', phone: '', address: '', city: '', country: 'Lebanon', payment: 'cod' });
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [orderId, setOrderId] = useState('');
 
   const shipping = total >= 50 ? 0 : 4;
   const grandTotal = total + shipping;
+
+  const validateForm = () => {
+    if (form.name.trim().length < 2) return 'Please enter your full name';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return 'Please enter a valid email';
+    const phoneDigits = form.phone.replace(/\D/g, '');
+    if (phoneDigits.length < 6) return 'Please enter a valid phone number';
+    if (form.address.trim().length < 4) return 'Please enter a full address';
+    if (form.city.trim().length < 2) return 'Please enter your city';
+    if (form.country.trim().length < 2) return 'Please enter your country';
+    return null;
+  };
 
   // Handle Stripe success redirect
   useEffect(() => {
@@ -30,9 +43,11 @@ export default function Checkout() {
         if (data.status === 'paid') {
           clearCart();
           setSuccess(true);
+        } else if (data.error) {
+          setErrorMsg(data.error);
         }
       })
-      .catch(() => {});
+      .catch(() => setErrorMsg('Could not verify your payment. Please contact us.'));
     return () => { cancelled = true; };
   }, [sessionId, clearCart]);
 
@@ -42,6 +57,7 @@ export default function Checkout() {
         <div className="success-state">
           <h1>Order Placed!</h1>
           <p>Thank you for your order. We'll contact you on WhatsApp or by phone to confirm.</p>
+          {orderId && <p style={{ color: '#666', fontSize: '0.9rem' }}>Order ID: <strong>#{orderId.slice(0, 8).toUpperCase()}</strong></p>}
           <p style={{ color: '#888', fontSize: '0.9rem', marginBottom: 24 }}>Questions? Call us at <strong>+961 81 898 170</strong></p>
           <Link to="/" className="btn-back">Back to Home</Link>
         </div>
@@ -61,39 +77,63 @@ export default function Checkout() {
     );
   }
 
-  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+    if (errorMsg) setErrorMsg('');
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitting(true);
+    if (submitting) return; // guard against double-submit
+    setErrorMsg('');
 
+    const vErr = validateForm();
+    if (vErr) { setErrorMsg(vErr); return; }
+
+    setSubmitting(true);
     try {
       if (form.payment === 'visa') {
-        // Stripe Checkout
+        // Stripe Checkout — redirect to Stripe's hosted, PCI-compliant
+        // payment page where the customer enters their real card details.
         const res = await fetch(`${API}/api/checkout/create-session`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ items: cart, customer: form, total: grandTotal }),
         });
-        const data = await res.json();
-        if (data.url) {
-          window.location.href = data.url;
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setErrorMsg(data.error || 'Could not start card payment. Please try again or use Cash on Delivery.');
+          setSubmitting(false);
           return;
         }
+        if (data.url) {
+          window.location.href = data.url;
+          return; // leave submitting=true; we're navigating away
+        }
+        setErrorMsg('Payment unavailable. Please try Cash on Delivery.');
+        setSubmitting(false);
       } else {
         // Cash on Delivery
-        await fetch(`${API}/api/orders`, {
+        const res = await fetch(`${API}/api/orders`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ items: cart, customer: form, total: grandTotal }),
+          body: JSON.stringify({ items: cart, customer: { ...form, payment: 'cod' }, total: grandTotal }),
         });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setErrorMsg(data.error || 'Could not place your order. Please try again.');
+          setSubmitting(false);
+          return;
+        }
+        setOrderId(data._id || data.id || '');
         clearCart();
         setSuccess(true);
+        setSubmitting(false);
       }
-    } catch {
-      alert('Something went wrong. Please try again.');
+    } catch (err) {
+      setErrorMsg('Network error. Please check your connection and try again.');
+      setSubmitting(false);
     }
-    setSubmitting(false);
   };
 
   return (
@@ -125,6 +165,14 @@ export default function Checkout() {
             ))}
           </div>
 
+          {errorMsg && (
+            <div className="checkout-error" role="alert" style={{
+              background: '#fff2f2', color: '#b00020', border: '1px solid #ffd1d1',
+              padding: '10px 14px', borderRadius: 10, marginTop: 14, fontSize: '0.92rem'
+            }}>
+              {errorMsg}
+            </div>
+          )}
           <button type="submit" className="checkout-submit" disabled={submitting}>
             {submitting
               ? 'Processing...'

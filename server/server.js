@@ -10,7 +10,7 @@ const app = express();
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'ahmadangelina2824';
 
 app.use(cors());
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '20mb' }));
 
 // ============================================================
 // DATA LAYER — Neon Postgres in production, JSON files locally
@@ -182,35 +182,37 @@ async function initDB() {
 let uploadHandler;
 
 if (process.env.POSTGRES_URL || process.env.DATABASE_URL) {
-  // Production: compress HEAVILY, then store as base64 data URI in Postgres.
-  // Produces BOTH a full-size image (600px, q72) for the product detail page
-  // and a thumbnail (260px, q60) for listing grids. The thumbnail is ~5-10KB
-  // which keeps category/home listings well under Neon's 64MB response cap
-  // even with hundreds of products.
-  uploadHandler = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+  // Production: compress and store as base64 data URI in Postgres.
+  // Produces BOTH a full-size image (1400px, q88) for the product detail page
+  // and a thumbnail (600px, q70) for listing grids. The full image is only
+  // fetched ONE AT A TIME via /api/products/:id, so Neon's 64MB response cap
+  // never comes into play. The thumbnail is ~20-35KB — crisp at 2x retina in
+  // the grid but still small enough that 500 products fit comfortably in one
+  // listing response.
+  uploadHandler = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } });
 
   async function uploadImage(req) {
     if (!req.file) return { image: '', thumbnail: '' };
     const { Jimp, JimpMime } = require('jimp');
     const src = await Jimp.read(req.file.buffer);
 
-    // Full image: long edge ≤ 600px
+    // Full image: long edge ≤ 1400px, high quality
     const full = src.clone();
     if (full.width > full.height) {
-      if (full.width > 600) full.resize({ w: 600 });
+      if (full.width > 1400) full.resize({ w: 1400 });
     } else {
-      if (full.height > 600) full.resize({ h: 600 });
+      if (full.height > 1400) full.resize({ h: 1400 });
     }
-    const fullBuf = await full.getBuffer(JimpMime.jpeg, { quality: 72 });
+    const fullBuf = await full.getBuffer(JimpMime.jpeg, { quality: 88 });
 
-    // Thumbnail: long edge ≤ 260px
+    // Thumbnail: long edge ≤ 600px so it's sharp at 2x retina in the grid
     const thumb = src.clone();
     if (thumb.width > thumb.height) {
-      if (thumb.width > 260) thumb.resize({ w: 260 });
+      if (thumb.width > 600) thumb.resize({ w: 600 });
     } else {
-      if (thumb.height > 260) thumb.resize({ h: 260 });
+      if (thumb.height > 600) thumb.resize({ h: 600 });
     }
-    const thumbBuf = await thumb.getBuffer(JimpMime.jpeg, { quality: 60 });
+    const thumbBuf = await thumb.getBuffer(JimpMime.jpeg, { quality: 70 });
 
     return {
       image: `data:image/jpeg;base64,${fullBuf.toString('base64')}`,
@@ -286,13 +288,28 @@ app.post('/api/admin/login', (req, res) => {
 });
 
 // Products
+// A request is "fresh" (cache-bypassing) if it carries the admin token OR
+// passes ?fresh=1. Admin dashboards always bypass the CDN so delete/add/edit
+// actions reflect instantly — no ghost products after a refresh.
+const isFreshRequest = (req) => {
+  if (req.query.fresh === '1') return true;
+  const t = req.headers.authorization;
+  if (t && t === `Bearer ${ADMIN_PASSWORD}`) return true;
+  return false;
+};
+
 app.get('/api/products', async (req, res) => {
   try {
     const filter = req.query.category ? { category: req.query.category } : {};
     const products = await Product.find(filter);
-    // CDN caches the listing for 60s, serves stale for up to 5m while revalidating.
-    // Admin mutations will naturally refresh on next page load.
-    res.set('Cache-Control', 'public, max-age=30, s-maxage=60, stale-while-revalidate=300');
+    if (isFreshRequest(req)) {
+      // Admin must always see the current truth
+      res.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+    } else {
+      // Short public CDN cache. s-maxage=15 means mutations propagate to shoppers
+      // within 15 seconds at most. stale-while-revalidate=60 keeps it fast.
+      res.set('Cache-Control', 'public, max-age=10, s-maxage=15, stale-while-revalidate=60');
+    }
     res.json(products);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -301,7 +318,11 @@ app.get('/api/products/:id', async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ error: 'Not found' });
-    res.set('Cache-Control', 'public, max-age=60, s-maxage=120, stale-while-revalidate=600');
+    if (isFreshRequest(req)) {
+      res.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+    } else {
+      res.set('Cache-Control', 'public, max-age=15, s-maxage=30, stale-while-revalidate=120');
+    }
     res.json(product);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -366,14 +387,92 @@ app.post('/api/products/_purge', requireAdmin, async (req, res) => {
 
 // Orders
 app.get('/api/orders', requireAdmin, async (req, res) => {
-  try { res.json(await Order.find()); } catch (e) { res.status(500).json({ error: e.message }); }
+  try {
+    res.set('Cache-Control', 'no-store');
+    res.json(await Order.find());
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
+
+// Validate incoming items against stock. Returns { ok: true } on success, or
+// { ok: false, error, status } with a human-readable reason.
+async function validateOrderItems(items) {
+  if (!Array.isArray(items) || items.length === 0) {
+    return { ok: false, status: 400, error: 'Cart is empty' };
+  }
+  for (const it of items) {
+    const pId = it.productId || it._id || it.id;
+    if (!pId) return { ok: false, status: 400, error: `Missing product id on line "${it.name || '?'}"` };
+    if (!Number.isFinite(it.quantity) || it.quantity < 1) {
+      return { ok: false, status: 400, error: `Invalid quantity on "${it.name || '?'}"` };
+    }
+    const product = await Product.findById(pId);
+    if (!product) return { ok: false, status: 400, error: `"${it.name || 'Item'}" is no longer available` };
+    if (product.inStock === false) return { ok: false, status: 400, error: `"${product.name}" is out of stock` };
+    const available = Number(product.quantity) || 0;
+    if (available > 0 && it.quantity > available) {
+      return { ok: false, status: 400, error: `Only ${available} left of "${product.name}"` };
+    }
+  }
+  return { ok: true };
+}
+
+// Decrement stock quantities after a confirmed order. Best-effort — if one
+// update fails we log it but do NOT fail the whole order, because the order
+// is already confirmed from the shopper's perspective.
+async function decrementStock(items) {
+  for (const it of items) {
+    try {
+      const pId = it.productId || it._id || it.id;
+      if (!pId) continue;
+      const product = await Product.findById(pId);
+      if (!product) continue;
+      const newQty = Math.max(0, (Number(product.quantity) || 0) - (Number(it.quantity) || 0));
+      await Product.findByIdAndUpdate(pId, {
+        quantity: newQty,
+        inStock: newQty > 0 ? product.inStock !== false : false,
+      }, { new: true });
+    } catch (err) {
+      console.error('Stock decrement failed for item', it, err.message);
+    }
+  }
+}
+
+// Light-weight field validation for customer info
+function validateCustomer(c) {
+  if (!c || typeof c !== 'object') return 'Customer info missing';
+  const required = ['name', 'email', 'phone', 'address', 'city', 'country'];
+  for (const f of required) {
+    if (!c[f] || String(c[f]).trim().length < 2) return `Please fill in your ${f}`;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.email)) return 'Please enter a valid email address';
+  return null;
+}
 
 app.post('/api/orders', async (req, res) => {
   try {
-    const order = await Order.create({ items: req.body.items, customer: req.body.customer, total: req.body.total });
+    const { items, customer, total } = req.body || {};
+    const custErr = validateCustomer(customer);
+    if (custErr) return res.status(400).json({ error: custErr });
+    const check = await validateOrderItems(items);
+    if (!check.ok) return res.status(check.status).json({ error: check.error });
+    if (!Number.isFinite(Number(total)) || Number(total) <= 0) {
+      return res.status(400).json({ error: 'Invalid total' });
+    }
+
+    const order = await Order.create({
+      items,
+      customer: { ...customer, payment: customer.payment || 'cod' },
+      total: Number(total),
+      status: 'pending',
+    });
+    // COD orders decrement stock immediately — Stripe orders wait for the
+    // payment confirmation poll to avoid burning inventory on abandoned carts.
+    await decrementStock(items);
     res.json(order);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    console.error('Order create failed:', e);
+    res.status(500).json({ error: 'Could not save order. Please try again.' });
+  }
 });
 
 app.put('/api/orders/:id/status', requireAdmin, async (req, res) => {
@@ -385,25 +484,55 @@ app.put('/api/orders/:id/status', requireAdmin, async (req, res) => {
 
 // Stripe Checkout (only if configured)
 app.post('/api/checkout/create-session', async (req, res) => {
-  if (!process.env.STRIPE_SECRET_KEY) return res.status(400).json({ error: 'Stripe not configured' });
+  if (!process.env.STRIPE_SECRET_KEY) {
+    return res.status(503).json({ error: 'Card payments are temporarily unavailable. Please choose Cash on Delivery.' });
+  }
   try {
+    const { items, customer, total } = req.body || {};
+    const custErr = validateCustomer(customer);
+    if (custErr) return res.status(400).json({ error: custErr });
+    const check = await validateOrderItems(items);
+    if (!check.ok) return res.status(check.status).json({ error: check.error });
+    if (!Number.isFinite(Number(total)) || Number(total) <= 0) {
+      return res.status(400).json({ error: 'Invalid total' });
+    }
+
     const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-    const { items, customer, total } = req.body;
     const origin = req.headers.origin || process.env.FRONTEND_URL || 'http://localhost:3000';
+
+    const lineItems = items.map(item => ({
+      price_data: {
+        currency: 'usd',
+        product_data: { name: `${item.name}${item.size ? ` (${item.size})` : ''}` },
+        unit_amount: Math.round(Number(item.price) * 100),
+      },
+      quantity: item.quantity,
+    }));
+
+    // Add shipping as an extra line item so the Stripe total matches ours exactly.
+    const subtotal = items.reduce((s, it) => s + Number(it.price) * Number(it.quantity), 0);
+    const shippingCents = Math.max(0, Math.round((Number(total) - subtotal) * 100));
+    if (shippingCents > 0) {
+      lineItems.push({
+        price_data: { currency: 'usd', product_data: { name: 'Shipping' }, unit_amount: shippingCents },
+        quantity: 1,
+      });
+    }
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       mode: 'payment',
       customer_email: customer.email,
-      line_items: items.map(item => ({
-        price_data: { currency: 'usd', product_data: { name: `${item.name} (${item.size})` }, unit_amount: Math.round(item.price * 100) },
-        quantity: item.quantity,
-      })),
+      line_items: lineItems,
       metadata: { orderData: JSON.stringify({ items, customer, total }) },
       success_url: `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/checkout`,
     });
     res.json({ url: session.url });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    console.error('Stripe session failed:', e);
+    res.status(500).json({ error: e.message || 'Could not start payment. Please try again.' });
+  }
 });
 
 app.get('/api/checkout/session/:id', async (req, res) => {
@@ -415,12 +544,22 @@ app.get('/api/checkout/session/:id', async (req, res) => {
       const orderData = JSON.parse(session.metadata.orderData);
       const existing = await Order.findOne({ stripeSessionId: session.id });
       if (!existing) {
-        await Order.create({ ...orderData, customer: { ...orderData.customer, payment: 'visa' }, status: 'confirmed', stripeSessionId: session.id });
+        await Order.create({
+          ...orderData,
+          customer: { ...orderData.customer, payment: 'visa' },
+          status: 'confirmed',
+          stripeSessionId: session.id,
+        });
+        // Decrement stock ONCE, on the first confirmation observation.
+        await decrementStock(orderData.items || []);
       }
       return res.json({ status: 'paid' });
     }
     res.json({ status: session.payment_status });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    console.error('Stripe session retrieve failed:', e);
+    res.status(500).json({ error: 'Could not verify payment. Please contact support.' });
+  }
 });
 
 // Start server (local dev)

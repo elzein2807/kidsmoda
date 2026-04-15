@@ -28,6 +28,33 @@ export default function Admin() {
 
   const headers = { Authorization: `Bearer ${token}` };
 
+  // Always cache-bust admin reads — we want the live truth, not the CDN's
+  // copy from 30 seconds ago. The ?fresh=1 flag tells the server to send
+  // Cache-Control: no-store, and the _t timestamp defeats any browser cache.
+  const freshUrl = (path) => `${API}${path}${path.includes('?') ? '&' : '?'}fresh=1&_t=${Date.now()}`;
+
+  const loadProducts = async () => {
+    try {
+      const r = await fetch(freshUrl('/api/products'), { headers, cache: 'no-store' });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const data = await r.json();
+      setProducts(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Load products failed', err);
+    }
+  };
+
+  const loadOrders = async () => {
+    try {
+      const r = await fetch(freshUrl('/api/orders'), { headers, cache: 'no-store' });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const data = await r.json();
+      setOrders(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Load orders failed', err);
+    }
+  };
+
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
@@ -53,8 +80,15 @@ export default function Admin() {
 
   useEffect(() => {
     if (!token) return;
-    fetch(`${API}/api/products`).then(r => r.json()).then(setProducts).catch(() => {});
-    fetch(`${API}/api/orders`, { headers }).then(r => r.json()).then(setOrders).catch(() => {});
+    const bust = Date.now();
+    fetch(`${API}/api/products?fresh=1&_t=${bust}`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
+      .then(r => r.ok ? r.json() : [])
+      .then(d => setProducts(Array.isArray(d) ? d : []))
+      .catch(() => {});
+    fetch(`${API}/api/orders?fresh=1&_t=${bust}`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
+      .then(r => r.ok ? r.json() : [])
+      .then(d => setOrders(Array.isArray(d) ? d : []))
+      .catch(() => {});
   }, [token]);
 
   const resetForm = () => {
@@ -73,8 +107,12 @@ export default function Admin() {
     setShowForm(true);
   };
 
+  const [saving, setSaving] = useState(false);
+
   const handleSubmitProduct = async (e) => {
     e.preventDefault();
+    if (saving) return;
+    setSaving(true);
     const fd = new FormData();
     fd.append('name', form.name);
     fd.append('description', form.description);
@@ -90,19 +128,35 @@ export default function Admin() {
     const method = editId ? 'PUT' : 'POST';
 
     try {
-      await fetch(url, { method, headers: { Authorization: `Bearer ${token}` }, body: fd });
-      const updated = await fetch(`${API}/api/products`).then(r => r.json());
-      setProducts(updated);
+      const res = await fetch(url, { method, headers: { Authorization: `Bearer ${token}` }, body: fd });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
+      await loadProducts();
       resetForm();
     } catch (err) {
       alert('Error saving product: ' + err.message);
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this product?')) return;
-    await fetch(`${API}/api/products/${id}`, { method: 'DELETE', headers });
-    setProducts(products.filter(p => pid(p) !== id));
+    // Optimistically remove it from the UI so the admin sees it disappear
+    // instantly, then confirm against the server.
+    const prev = products;
+    setProducts(prev.filter(p => pid(p) !== id));
+    try {
+      const res = await fetch(`${API}/api/products/${id}`, { method: 'DELETE', headers });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      // Re-sync from the server to be 100% sure the delete stuck.
+      await loadProducts();
+    } catch (err) {
+      alert('Could not delete product: ' + err.message);
+      setProducts(prev);
+    }
   };
 
   const handleStatusChange = async (orderId, status) => {
@@ -170,8 +224,10 @@ export default function Admin() {
               <textarea placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
               <textarea placeholder="Safety info (e.g. CE certified, non-toxic...)" value={form.safety} onChange={(e) => setForm({ ...form, safety: e.target.value })} />
               <div className="admin-form-actions">
-                <button type="submit" className="admin-save-btn">{editId ? 'Update' : 'Add Product'}</button>
-                <button type="button" className="admin-cancel-btn" onClick={resetForm}>Cancel</button>
+                <button type="submit" className="admin-save-btn" disabled={saving}>
+                  {saving ? 'Saving…' : (editId ? 'Update' : 'Add Product')}
+                </button>
+                <button type="button" className="admin-cancel-btn" onClick={resetForm} disabled={saving}>Cancel</button>
               </div>
             </form>
           )}

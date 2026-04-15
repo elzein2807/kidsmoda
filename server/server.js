@@ -281,6 +281,18 @@ app.use(async (req, res, next) => {
 // ROUTES
 // ============================================================
 
+// Public config — tells the frontend which payment methods are live. If no
+// STRIPE_SECRET_KEY is set we hide the Visa option entirely so customers
+// never hit a dead-end "Pay with Card" button. The moment the env var is
+// added, Visa lights up automatically on the next page load.
+app.get('/api/config', (req, res) => {
+  res.set('Cache-Control', 'public, max-age=30, s-maxage=60, stale-while-revalidate=300');
+  res.json({
+    stripeEnabled: !!process.env.STRIPE_SECRET_KEY,
+    currency: 'USD',
+  });
+});
+
 // Admin login
 app.post('/api/admin/login', (req, res) => {
   if (req.body.password === ADMIN_PASSWORD) return res.json({ success: true, token: ADMIN_PASSWORD });

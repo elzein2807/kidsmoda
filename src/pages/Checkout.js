@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { API } from '../utils/image';
 
-const PAYMENT_METHODS = [
+const ALL_PAYMENT_METHODS = [
   { value: 'cod', label: 'Cash on Delivery' },
   { value: 'visa', label: 'Visa / Bank Card' },
 ];
@@ -17,6 +17,19 @@ export default function Checkout() {
   const [success, setSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [orderId, setOrderId] = useState('');
+  const [stripeEnabled, setStripeEnabled] = useState(false);
+
+  // Ask the server which payment methods are live. If Stripe isn't
+  // configured we hide the Visa option entirely so customers never hit a
+  // dead-end "Pay with Card" button.
+  useEffect(() => {
+    fetch(`${API}/api/config`)
+      .then(r => r.ok ? r.json() : {})
+      .then(cfg => setStripeEnabled(!!cfg.stripeEnabled))
+      .catch(() => {});
+  }, []);
+
+  const PAYMENT_METHODS = stripeEnabled ? ALL_PAYMENT_METHODS : ALL_PAYMENT_METHODS.filter(p => p.value !== 'visa');
 
   const shipping = total >= 50 ? 0 : 4;
   const grandTotal = total + shipping;

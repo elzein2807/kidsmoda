@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { LogOut, Plus, Trash2, Edit3, Package, ShoppingCart, Phone, Mail, MapPin, User } from 'lucide-react';
-
-const API = process.env.REACT_APP_API || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : '');
+import { API, resolveImage } from '../utils/image';
 
 const CATEGORIES = [
   { value: 'shoes', label: 'Shoes' },
@@ -112,7 +111,7 @@ export default function Admin() {
       headers: { ...headers, 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
     });
-    setOrders(orders.map(o => (pid(o) === orderId ? { ...o, status } : o)));
+    setOrders(prev => prev.map(o => (pid(o) === orderId ? { ...o, status } : o)));
   };
 
   if (!token) {
@@ -189,7 +188,7 @@ export default function Admin() {
             {products.map(p => (
               <div className="admin-table-row" key={pid(p)}>
                 <span>
-                  <img src={p.image || 'https://placehold.co/60x60/eee/999?text=No+Img'} alt="" className="admin-thumb" />
+                  <img src={resolveImage(p.thumbnail || p.image, p.name, '60x60')} alt="" className="admin-thumb" loading="lazy" decoding="async" />
                 </span>
                 <span className="admin-product-name">{p.name}</span>
                 <span className="admin-product-cat">{p.category}</span>

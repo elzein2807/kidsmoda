@@ -37,9 +37,14 @@ async function initDB() {
       safety TEXT DEFAULT 'CE certified. Non-toxic materials. Tested for child safety.',
       material TEXT DEFAULT '',
       image TEXT DEFAULT '',
+      thumbnail TEXT DEFAULT '',
       in_stock BOOLEAN DEFAULT true,
       created_at TIMESTAMPTZ DEFAULT NOW()
     )`;
+    // Migrate existing schemas that predate the thumbnail column
+    await sql`ALTER TABLE products ADD COLUMN IF NOT EXISTS thumbnail TEXT DEFAULT ''`;
+    await sql`CREATE INDEX IF NOT EXISTS products_category_idx ON products (category)`;
+    await sql`CREATE INDEX IF NOT EXISTS products_created_at_idx ON products (created_at DESC)`;
 
     await sql`CREATE TABLE IF NOT EXISTS orders (
       id TEXT PRIMARY KEY,
@@ -52,20 +57,28 @@ async function initDB() {
     )`;
 
     Product = {
+      // List queries return ONLY the thumbnail (not the full image) so we
+      // stay well under Neon's 64MB serverless response cap as inventory grows.
       find: async (filter) => {
         let rows;
         if (filter && filter.category) {
-          rows = await sql`SELECT * FROM products WHERE category = ${filter.category} ORDER BY created_at DESC`;
+          rows = await sql`SELECT id, name, description, price, category, sizes, quantity, safety, material, thumbnail, in_stock, created_at
+            FROM products WHERE category = ${filter.category} ORDER BY created_at DESC`;
         } else {
-          rows = await sql`SELECT * FROM products ORDER BY created_at DESC`;
+          rows = await sql`SELECT id, name, description, price, category, sizes, quantity, safety, material, thumbnail, in_stock, created_at
+            FROM products ORDER BY created_at DESC`;
         }
         return rows.map(r => ({
           _id: r.id, id: r.id, name: r.name, description: r.description,
           price: parseFloat(r.price), category: r.category, sizes: r.sizes || [],
           quantity: r.quantity, safety: r.safety, material: r.material,
-          image: r.image, inStock: r.in_stock, createdAt: r.created_at,
+          // Frontend reads `thumbnail` when present, falling back to `image`.
+          // Populate both with the same compact value so old clients still work.
+          thumbnail: r.thumbnail || '', image: r.thumbnail || '',
+          inStock: r.in_stock, createdAt: r.created_at,
         }));
       },
+      // Detail query returns the full image for the product page.
       findById: async (id) => {
         const rows = await sql`SELECT * FROM products WHERE id = ${id}`;
         if (rows.length === 0) return null;
@@ -74,15 +87,16 @@ async function initDB() {
           _id: r.id, id: r.id, name: r.name, description: r.description,
           price: parseFloat(r.price), category: r.category, sizes: r.sizes || [],
           quantity: r.quantity, safety: r.safety, material: r.material,
-          image: r.image, inStock: r.in_stock, createdAt: r.created_at,
+          image: r.image, thumbnail: r.thumbnail || '',
+          inStock: r.in_stock, createdAt: r.created_at,
         };
       },
       create: async (data) => {
         const id = uuidv4();
-        await sql`INSERT INTO products (id, name, description, price, category, sizes, quantity, safety, material, image, in_stock)
+        await sql`INSERT INTO products (id, name, description, price, category, sizes, quantity, safety, material, image, thumbnail, in_stock)
           VALUES (${id}, ${data.name}, ${data.description || ''}, ${data.price}, ${data.category},
           ${data.sizes || []}, ${data.quantity || 0}, ${data.safety || 'CE certified. Non-toxic materials.'},
-          ${data.material || ''}, ${data.image || ''}, ${data.inStock !== false})`;
+          ${data.material || ''}, ${data.image || ''}, ${data.thumbnail || ''}, ${data.inStock !== false})`;
         return { _id: id, id, ...data, createdAt: new Date().toISOString() };
       },
       findByIdAndUpdate: async (id, update) => {
@@ -93,7 +107,9 @@ async function initDB() {
           name = ${merged.name}, description = ${merged.description || ''}, price = ${merged.price},
           category = ${merged.category}, sizes = ${merged.sizes || []}, quantity = ${merged.quantity || 0},
           safety = ${merged.safety || ''}, material = ${merged.material || ''},
-          image = ${merged.image || current.image || ''}, in_stock = ${merged.inStock !== false}
+          image = ${merged.image || current.image || ''},
+          thumbnail = ${merged.thumbnail || current.thumbnail || ''},
+          in_stock = ${merged.inStock !== false}
           WHERE id = ${id}`;
         return { ...merged, _id: id, id };
       },
@@ -167,22 +183,39 @@ let uploadHandler;
 
 if (process.env.POSTGRES_URL || process.env.DATABASE_URL) {
   // Production: compress HEAVILY, then store as base64 data URI in Postgres.
-  // Neon serverless has a 64MB response cap — large base64 blobs break /api/products.
-  // Jimp is pure JS so it works on Vercel serverless without native-binary pain.
+  // Produces BOTH a full-size image (600px, q72) for the product detail page
+  // and a thumbnail (260px, q60) for listing grids. The thumbnail is ~5-10KB
+  // which keeps category/home listings well under Neon's 64MB response cap
+  // even with hundreds of products.
   uploadHandler = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
   async function uploadImage(req) {
-    if (!req.file) return '';
+    if (!req.file) return { image: '', thumbnail: '' };
     const { Jimp, JimpMime } = require('jimp');
-    const img = await Jimp.read(req.file.buffer);
-    // Resize so the longer edge is at most 600px (preserves aspect ratio)
-    if (img.width > img.height) {
-      if (img.width > 600) img.resize({ w: 600 });
+    const src = await Jimp.read(req.file.buffer);
+
+    // Full image: long edge ≤ 600px
+    const full = src.clone();
+    if (full.width > full.height) {
+      if (full.width > 600) full.resize({ w: 600 });
     } else {
-      if (img.height > 600) img.resize({ h: 600 });
+      if (full.height > 600) full.resize({ h: 600 });
     }
-    const buf = await img.getBuffer(JimpMime.jpeg, { quality: 70 });
-    return `data:image/jpeg;base64,${buf.toString('base64')}`;
+    const fullBuf = await full.getBuffer(JimpMime.jpeg, { quality: 72 });
+
+    // Thumbnail: long edge ≤ 260px
+    const thumb = src.clone();
+    if (thumb.width > thumb.height) {
+      if (thumb.width > 260) thumb.resize({ w: 260 });
+    } else {
+      if (thumb.height > 260) thumb.resize({ h: 260 });
+    }
+    const thumbBuf = await thumb.getBuffer(JimpMime.jpeg, { quality: 60 });
+
+    return {
+      image: `data:image/jpeg;base64,${fullBuf.toString('base64')}`,
+      thumbnail: `data:image/jpeg;base64,${thumbBuf.toString('base64')}`,
+    };
   }
   app._uploadImage = uploadImage;
 } else if (process.env.CLOUDINARY_CLOUD_NAME) {
@@ -195,11 +228,11 @@ if (process.env.POSTGRES_URL || process.env.DATABASE_URL) {
   uploadHandler = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
   async function uploadImage(req) {
-    if (!req.file) return '';
+    if (!req.file) return { image: '', thumbnail: '' };
     return new Promise((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
         { folder: 'kidsmoda', transformation: [{ width: 800, height: 1000, crop: 'limit', quality: 'auto' }] },
-        (err, result) => (err ? reject(err) : resolve(result.secure_url))
+        (err, result) => (err ? reject(err) : resolve({ image: result.secure_url, thumbnail: result.secure_url }))
       );
       stream.end(req.file.buffer);
     });
@@ -218,8 +251,9 @@ if (process.env.POSTGRES_URL || process.env.DATABASE_URL) {
   uploadHandler = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
 
   async function uploadImage(req) {
-    if (!req.file) return '';
-    return `/uploads/${req.file.filename}`;
+    if (!req.file) return { image: '', thumbnail: '' };
+    const url = `/uploads/${req.file.filename}`;
+    return { image: url, thumbnail: url };
   }
   app._uploadImage = uploadImage;
 }
@@ -256,6 +290,9 @@ app.get('/api/products', async (req, res) => {
   try {
     const filter = req.query.category ? { category: req.query.category } : {};
     const products = await Product.find(filter);
+    // CDN caches the listing for 60s, serves stale for up to 5m while revalidating.
+    // Admin mutations will naturally refresh on next page load.
+    res.set('Cache-Control', 'public, max-age=30, s-maxage=60, stale-while-revalidate=300');
     res.json(products);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -264,13 +301,14 @@ app.get('/api/products/:id', async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ error: 'Not found' });
+    res.set('Cache-Control', 'public, max-age=60, s-maxage=120, stale-while-revalidate=600');
     res.json(product);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/products', requireAdmin, upload.single('image'), async (req, res) => {
   try {
-    const imageUrl = await app._uploadImage(req);
+    const { image, thumbnail } = await app._uploadImage(req);
     const product = await Product.create({
       name: req.body.name,
       description: req.body.description || '',
@@ -280,7 +318,7 @@ app.post('/api/products', requireAdmin, upload.single('image'), async (req, res)
       quantity: parseInt(req.body.quantity) || 0,
       safety: req.body.safety || 'CE certified. Non-toxic materials. Tested for child safety.',
       material: req.body.material || '',
-      image: imageUrl,
+      image, thumbnail,
       inStock: true,
     });
     res.json(product);
@@ -300,8 +338,9 @@ app.put('/api/products/:id', requireAdmin, upload.single('image'), async (req, r
     if (req.body.material !== undefined) update.material = req.body.material;
     if (req.body.inStock !== undefined) update.inStock = req.body.inStock === 'true';
 
-    const imageUrl = await app._uploadImage(req);
-    if (imageUrl) update.image = imageUrl;
+    const { image, thumbnail } = await app._uploadImage(req);
+    if (image) update.image = image;
+    if (thumbnail) update.thumbnail = thumbnail;
 
     const product = await Product.findByIdAndUpdate(req.params.id, update, { new: true });
     res.json(product);

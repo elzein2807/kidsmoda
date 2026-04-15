@@ -18,7 +18,7 @@ const marqueeItems = [
 
 export default function Home() {
   return (
-    <>
+    <div className="fade-in">
       <section className="hero">
         <div className="hero-badge">New Collection 2026</div>
         <h1>
@@ -55,7 +55,7 @@ export default function Home() {
           {categories.map((cat, i) => (
             <Link to={`/category/${cat.slug}`} className="category-card" data-color={cat.color} key={i}>
               <div className="category-image-wrap">
-                <img className="category-image" src={cat.image} alt={cat.name} />
+                <img className="category-image" src={cat.image} alt={cat.name} loading="lazy" decoding="async" />
               </div>
               <div className="category-bottom">
                 <span className="category-name">{cat.name}</span>
@@ -88,6 +88,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-    </>
+    </div>
   );
 }

@@ -1,4 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;700;800;900&display=swap');
+/* Fonts are now loaded from public/index.html with preconnect + async <link>
+   so they don't block the initial paint. */
 
 :root {
   --black: #111111;
@@ -443,4 +444,101 @@ img { display: block; max-width: 100%; }
   .products-grid { grid-template-columns: 1fr; }
   .info-grid { grid-template-columns: 1fr; }
   .footer { padding: 40px 16px 24px; }
+  .hero { padding: 110px 18px 50px; }
+  .hero h1 { font-size: clamp(2.4rem, 13vw, 3.8rem); }
+  .product-detail-info h1 { font-size: 1.5rem; }
+  .product-detail-price { font-size: 1.4rem; }
+  .cart-item { gap: 12px; }
+  .cart-item-image { width: 64px; height: 80px; }
+  .similar-grid { grid-template-columns: repeat(2, 1fr) !important; }
 }
+
+/* ==================== PAGE FADE / TRANSITIONS ==================== */
+@keyframes pageFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-in { animation: pageFadeIn 0.28s ease-out both; }
+
+/* ==================== SKELETON LOADERS ==================== */
+@keyframes skeletonShimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.skeleton-box,
+.skeleton-line {
+  background: linear-gradient(90deg, #eee 0%, #f7f7f7 40%, #eee 80%);
+  background-size: 800px 100%;
+  animation: skeletonShimmer 1.4s linear infinite;
+  border: 2px solid #e5e5e5;
+}
+.skeleton-box { width: 100%; min-height: 300px; }
+.skeleton-line { height: 14px; margin-bottom: 12px; border: none; border-radius: 2px; }
+.skeleton-line-lg { height: 28px; width: 70%; margin-bottom: 16px; }
+.skeleton-line-md { height: 20px; width: 40%; margin-bottom: 20px; }
+.skeleton-line-short { width: 30%; }
+.skeleton-card { pointer-events: none; }
+.skeleton-card .skeleton-line { margin: 6px 0; }
+
+/* ==================== MOBILE NAV DRAWER ==================== */
+.navbar-burger {
+  display: none; background: none; border: none; padding: 6px; cursor: pointer; color: var(--black);
+}
+.mobile-drawer {
+  position: fixed; inset: 0; z-index: 1100; background: rgba(0,0,0,0);
+  pointer-events: none; transition: background 0.25s ease;
+}
+.mobile-drawer.open { background: rgba(0,0,0,0.4); pointer-events: auto; }
+.mobile-drawer-panel {
+  position: absolute; top: 0; left: 0; height: 100%; width: 82%; max-width: 320px;
+  background: var(--white); border-right: var(--border); box-shadow: 6px 0 0 var(--black);
+  transform: translateX(-100%); transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  display: flex; flex-direction: column;
+}
+.mobile-drawer.open .mobile-drawer-panel { transform: translateX(0); }
+.mobile-drawer-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 24px; border-bottom: var(--border);
+}
+.mobile-drawer-title {
+  font-family: var(--font-display); font-weight: 900; text-transform: uppercase;
+  font-size: 1rem; letter-spacing: 0.05em;
+}
+.mobile-drawer-close {
+  background: none; border: none; cursor: pointer; color: var(--black); padding: 6px;
+}
+.mobile-drawer-links {
+  list-style: none; padding: 12px 0; margin: 0; flex: 1;
+}
+.mobile-drawer-links li a {
+  display: block; padding: 16px 24px; font-family: var(--font-display);
+  font-size: 0.95rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--black); border-bottom: 1px solid #f0f0f0; transition: background 0.15s, color 0.15s;
+}
+.mobile-drawer-links li a:hover { background: var(--cream); color: var(--pink); }
+.mobile-drawer-sep { height: 10px; }
+
+@media (max-width: 768px) {
+  .navbar-burger { display: flex; }
+  .navbar-logo { position: absolute; left: 50%; transform: translateX(-50%); }
+  .navbar { justify-content: space-between; }
+}
+
+/* ==================== REDUCED MOTION ==================== */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .fade-in { animation: none; }
+  .marquee-track { animation: none; }
+}
+
+/* ==================== FOCUS RINGS (accessibility) ==================== */
+:focus-visible {
+  outline: 3px solid var(--pink);
+  outline-offset: 2px;
+}
+button:focus:not(:focus-visible) { outline: none; }

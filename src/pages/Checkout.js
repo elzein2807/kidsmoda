@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
-
-const API = process.env.REACT_APP_API || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : '');
+import { API } from '../utils/image';
 
 const PAYMENT_METHODS = [
   { value: 'cod', label: 'Cash on Delivery' },
@@ -22,22 +21,24 @@ export default function Checkout() {
 
   // Handle Stripe success redirect
   useEffect(() => {
-    if (sessionId) {
-      fetch(`${API}/api/checkout/session/${sessionId}`)
-        .then(r => r.json())
-        .then(data => {
-          if (data.status === 'paid') {
-            clearCart();
-            setSuccess(true);
-          }
-        })
-        .catch(() => {});
-    }
-  }, [sessionId]);
+    if (!sessionId) return;
+    let cancelled = false;
+    fetch(`${API}/api/checkout/session/${sessionId}`)
+      .then(r => r.json())
+      .then(data => {
+        if (cancelled) return;
+        if (data.status === 'paid') {
+          clearCart();
+          setSuccess(true);
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [sessionId, clearCart]);
 
   if (success || (sessionId && cart.length === 0)) {
     return (
-      <div className="page">
+      <div className="page fade-in">
         <div className="success-state">
           <h1>Order Placed!</h1>
           <p>Thank you for your order. We'll contact you on WhatsApp or by phone to confirm.</p>
@@ -50,7 +51,7 @@ export default function Checkout() {
 
   if (cart.length === 0) {
     return (
-      <div className="page">
+      <div className="page fade-in">
         <h1 className="page-title">Checkout</h1>
         <div className="empty-state">
           <p>Your cart is empty.</p>
@@ -96,7 +97,7 @@ export default function Checkout() {
   };
 
   return (
-    <div className="page">
+    <div className="page fade-in">
       <h1 className="page-title">Checkout</h1>
       <div className="checkout-layout">
         <form className="checkout-form" onSubmit={handleSubmit}>

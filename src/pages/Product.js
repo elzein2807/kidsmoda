@@ -3,8 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { ShoppingBag, Shield, Truck, CreditCard, Plus, Minus } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import ProductCard from '../components/ProductCard';
-
-const API = process.env.REACT_APP_API || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : '');
+import { API, resolveImage } from '../utils/image';
 
 export default function Product() {
   const { id } = useParams();
@@ -16,29 +15,52 @@ export default function Product() {
   const [added, setAdded] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     setProduct(null);
     setSimilar([]);
     setSelectedSize('');
     setQuantity(1);
     setAdded(false);
-    fetch(`${API}/api/products/${id}`)
-      .then(r => r.json())
-      .then(p => {
+
+    (async () => {
+      try {
+        const p = await fetch(`${API}/api/products/${id}`).then(r => r.json());
+        if (cancelled) return;
         setProduct(p);
+        // Kick off similar fetch without blocking render
         fetch(`${API}/api/products?category=${p.category}`)
           .then(r => r.json())
-          .then(all => setSimilar(all.filter(x => (x._id || x.id) !== id).slice(0, 4)))
+          .then(all => {
+            if (cancelled) return;
+            setSimilar(all.filter(x => (x._id || x.id) !== id).slice(0, 4));
+          })
           .catch(() => {});
-      })
-      .catch(() => {});
+      } catch {
+        /* swallow — UI stays in loading state if the fetch never resolves */
+      }
+    })();
+
+    return () => { cancelled = true; };
   }, [id]);
 
-  if (!product) return <div className="page"><p className="page-message">Loading...</p></div>;
+  if (!product) {
+    return (
+      <div className="page fade-in">
+        <div className="product-detail">
+          <div className="product-detail-image skeleton-box" />
+          <div className="product-detail-info">
+            <div className="skeleton-line skeleton-line-lg" />
+            <div className="skeleton-line skeleton-line-md" />
+            <div className="skeleton-line" />
+            <div className="skeleton-line" />
+            <div className="skeleton-line skeleton-line-short" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-  const isCloudinary = product.image && product.image.startsWith('http');
-  const imgSrc = product.image
-    ? (isCloudinary ? product.image : `${API}${product.image}`)
-    : `https://placehold.co/600x750/eee/999?text=${encodeURIComponent(product.name)}&font=montserrat`;
+  const imgSrc = resolveImage(product.image, product.name, '600x750');
   const inStock = product.quantity > 0;
 
   const handleAdd = () => {
@@ -50,7 +72,7 @@ export default function Product() {
   };
 
   return (
-    <div className="page">
+    <div className="page fade-in">
       <div className="page-header">
         <Link to="/" className="breadcrumb">Home</Link>
         <span className="breadcrumb-sep">/</span>
@@ -61,13 +83,13 @@ export default function Product() {
 
       <div className="product-detail">
         <div className="product-detail-image">
-          <img src={imgSrc} alt={product.name} />
+          <img src={imgSrc} alt={product.name} decoding="async" />
         </div>
         <div className="product-detail-info">
           <h1>{product.name}</h1>
           <div className="product-detail-price">${product.price.toFixed(2)}</div>
 
-          {product.quantity > 0 ? (
+          {inStock ? (
             <p className="product-stock in-stock">{product.quantity} in stock</p>
           ) : (
             <p className="product-stock out-of-stock">Out of stock</p>
@@ -82,7 +104,7 @@ export default function Product() {
               <label>Size</label>
               <div className="size-options">
                 {product.sizes.map(s => (
-                  <button key={s} className={`size-btn ${selectedSize === s ? 'active' : ''}`} onClick={() => setSelectedSize(s)}>
+                  <button key={s} type="button" className={`size-btn ${selectedSize === s ? 'active' : ''}`} onClick={() => setSelectedSize(s)}>
                     {s}
                   </button>
                 ))}
@@ -93,9 +115,9 @@ export default function Product() {
           <div className="product-quantity">
             <label>Quantity</label>
             <div className="quantity-selector">
-              <button type="button" onClick={() => setQuantity(Math.max(1, quantity - 1))}><Minus size={16} /></button>
+              <button type="button" aria-label="Decrease" onClick={() => setQuantity(Math.max(1, quantity - 1))}><Minus size={16} /></button>
               <span>{quantity}</span>
-              <button type="button" onClick={() => setQuantity(Math.min(product.quantity || 99, quantity + 1))}><Plus size={16} /></button>
+              <button type="button" aria-label="Increase" onClick={() => setQuantity(Math.min(product.quantity || 99, quantity + 1))}><Plus size={16} /></button>
             </div>
           </div>
 

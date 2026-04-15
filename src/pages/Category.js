@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
-
-const API = process.env.REACT_APP_API || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : '');
+import { API } from '../utils/image';
 
 const LABELS = {
   shoes: 'Shoes',
@@ -13,21 +12,35 @@ const LABELS = {
   babies: 'Babies',
 };
 
+function ProductSkeleton() {
+  return (
+    <div className="product-card skeleton-card">
+      <div className="product-image-wrap skeleton-box" style={{ aspectRatio: '4/5' }} />
+      <div className="product-info">
+        <div className="skeleton-line" />
+        <div className="skeleton-line skeleton-line-short" />
+      </div>
+    </div>
+  );
+}
+
 export default function Category() {
   const { slug } = useParams();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
     setLoading(true);
     fetch(`${API}/api/products?category=${slug}`)
       .then((r) => r.json())
-      .then((data) => { setProducts(data); setLoading(false); })
-      .catch(() => setLoading(false));
+      .then((data) => { if (!cancelled) { setProducts(Array.isArray(data) ? data : []); setLoading(false); } })
+      .catch(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [slug]);
 
   return (
-    <div className="page">
+    <div className="page fade-in">
       <div className="page-header">
         <Link to="/" className="breadcrumb">Home</Link>
         <span className="breadcrumb-sep">/</span>
@@ -36,7 +49,9 @@ export default function Category() {
       <h1 className="page-title">{LABELS[slug] || slug}</h1>
 
       {loading ? (
-        <p className="page-message">Loading...</p>
+        <div className="products-grid">
+          {Array.from({ length: 6 }).map((_, i) => <ProductSkeleton key={i} />)}
+        </div>
       ) : products.length === 0 ? (
         <div className="empty-state">
           <p>No products in this category yet.</p>
@@ -45,7 +60,7 @@ export default function Category() {
       ) : (
         <div className="products-grid">
           {products.map((p) => (
-            <ProductCard key={p.id} product={p} />
+            <ProductCard key={p._id || p.id} product={p} />
           ))}
         </div>
       )}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ShoppingBag, Menu, X } from 'lucide-react';
 import { useCart } from '../context/CartContext';
@@ -15,7 +15,10 @@ const LINKS = [
 export default function Navbar() {
   const { count } = useCart();
   const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const [bump, setBump] = useState(false);
   const { pathname } = useLocation();
+  const prevCount = useRef(count);
 
   // Auto-close the drawer whenever the route changes
   useEffect(() => { setOpen(false); }, [pathname]);
@@ -26,9 +29,27 @@ export default function Navbar() {
     return () => { document.body.style.overflow = ''; };
   }, [open]);
 
+  // Subtle shadow once the user scrolls past the top
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // Bounce the cart pill whenever an item is added
+  useEffect(() => {
+    if (count > prevCount.current) {
+      setBump(true);
+      const t = setTimeout(() => setBump(false), 450);
+      return () => clearTimeout(t);
+    }
+    prevCount.current = count;
+  }, [count]);
+
   return (
     <>
-      <nav className="navbar">
+      <nav className={`navbar ${scrolled ? 'scrolled' : ''}`}>
         <button
           className="navbar-burger"
           aria-label={open ? 'Close menu' : 'Open menu'}
@@ -46,7 +67,7 @@ export default function Navbar() {
             <li key={l.to}><Link to={l.to}>{l.label}</Link></li>
           ))}
         </ul>
-        <Link to="/cart" className="navbar-cart">
+        <Link to="/cart" className={`navbar-cart ${bump ? 'bump' : ''}`}>
           <ShoppingBag size={14} style={{ marginRight: 6, verticalAlign: 'middle' }} />
           Cart ({count})
         </Link>

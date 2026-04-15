@@ -32,7 +32,16 @@ img { display: block; max-width: 100%; }
   padding: 14px 40px;
   display: flex; align-items: center; justify-content: space-between;
   background: var(--white); border-bottom: var(--border);
+  transition: box-shadow 0.25s ease, padding 0.25s ease;
 }
+.navbar.scrolled { box-shadow: 0 4px 0 rgba(17,17,17,0.08); padding-top: 11px; padding-bottom: 11px; }
+@keyframes cartBump {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.12) translate(-2px,-2px); }
+  60%  { transform: scale(0.97); }
+  100% { transform: scale(1); }
+}
+.navbar-cart.bump { animation: cartBump 0.45s cubic-bezier(0.22, 1, 0.36, 1); background: var(--pink); color: var(--white); }
 .navbar-logo { font-family: var(--font-display); font-size: 1.5rem; font-weight: 900; text-transform: uppercase; letter-spacing: -0.02em; }
 .navbar-logo .kids { color: var(--pink); }
 .navbar-logo .moda { color: var(--blue); }
@@ -51,6 +60,15 @@ img { display: block; max-width: 100%; }
 .hero {
   padding: 140px 40px 80px; text-align: center; background: var(--cream);
 }
+@keyframes heroEnter {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.hero > * { animation: heroEnter 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.hero-badge { animation-delay: 0.05s; }
+.hero h1    { animation-delay: 0.15s; }
+.hero-sub   { animation-delay: 0.25s; }
+.hero-btn   { animation-delay: 0.35s; }
 .hero-badge {
   display: inline-block; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.2em;
   text-transform: uppercase; padding: 8px 20px; background: var(--pink);

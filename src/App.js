@@ -5,6 +5,7 @@ import { Lock } from 'lucide-react';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
+import ErrorBoundary from './components/ErrorBoundary';
 import Home from './pages/Home';
 import { API } from './utils/image';
 import './App.css';
@@ -90,37 +91,39 @@ function AdminFloatingButton() {
 
 function App() {
   return (
-    <CartProvider>
-      <BrowserRouter>
-        <ScrollToTop />
-        <Routes>
-          <Route path="/admin" element={
-            <Suspense fallback={<PageFallback />}><Admin /></Suspense>
-          } />
-          <Route
-            path="*"
-            element={
-              <>
-                <Navbar />
-                <Suspense fallback={<PageFallback />}>
-                  <Routes>
-                    <Route path="/" element={<Home />} />
-                    <Route path="/category/:slug" element={<Category />} />
-                    <Route path="/product/:id" element={<Product />} />
-                    <Route path="/cart" element={<Cart />} />
-                    <Route path="/checkout" element={<Checkout />} />
-                    <Route path="/checkout/success" element={<Checkout />} />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </Suspense>
-                <Footer />
-                <AdminFloatingButton />
-              </>
-            }
-          />
-        </Routes>
-      </BrowserRouter>
-    </CartProvider>
+    <ErrorBoundary>
+      <CartProvider>
+        <BrowserRouter>
+          <ScrollToTop />
+          <Routes>
+            <Route path="/admin" element={
+              <Suspense fallback={<PageFallback />}><Admin /></Suspense>
+            } />
+            <Route
+              path="*"
+              element={
+                <>
+                  <Navbar />
+                  <Suspense fallback={<PageFallback />}>
+                    <Routes>
+                      <Route path="/" element={<Home />} />
+                      <Route path="/category/:slug" element={<Category />} />
+                      <Route path="/product/:id" element={<Product />} />
+                      <Route path="/cart" element={<Cart />} />
+                      <Route path="/checkout" element={<Checkout />} />
+                      <Route path="/checkout/success" element={<Checkout />} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </Suspense>
+                  <Footer />
+                  <AdminFloatingButton />
+                </>
+              }
+            />
+          </Routes>
+        </BrowserRouter>
+      </CartProvider>
+    </ErrorBoundary>
   );
 }
 

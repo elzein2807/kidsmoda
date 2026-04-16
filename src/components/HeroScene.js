@@ -68,8 +68,8 @@ export default function HeroScene() {
       });
 
     /* ---- LIGHTS (very soft) ---- */
-    scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-    const dir = new THREE.DirectionalLight(0xfff0e6, 0.6);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    const dir = new THREE.DirectionalLight(0xffe8b0, 0.5);
     dir.position.set(5, 8, 10);
     scene.add(dir);
 
@@ -78,7 +78,7 @@ export default function HeroScene() {
 
     const sphere = new THREE.Mesh(
       new THREE.SphereGeometry(2.2, 24, 24),
-      makeMat(0xf2d0d8, 0.18)
+      makeMat(0xC9A84C, 0.10)
     );
     sphere.position.set(-6, 3.5, -3);
     scene.add(sphere);
@@ -86,7 +86,7 @@ export default function HeroScene() {
 
     const torus = new THREE.Mesh(
       new THREE.TorusGeometry(1.6, 0.55, 12, 32),
-      makeMat(0xfdf4e0, 0.15)
+      makeMat(0xD4B55A, 0.08)
     );
     torus.position.set(5.5, -1.5, -4);
     torus.rotation.x = Math.PI * 0.3;
@@ -95,7 +95,7 @@ export default function HeroScene() {
 
     const dodeca = new THREE.Mesh(
       new THREE.DodecahedronGeometry(1.4, 0),
-      makeMat(0xf2d0d8, 0.12)
+      makeMat(0xC9A84C, 0.07)
     );
     dodeca.position.set(1.5, -3.5, -5);
     scene.add(dodeca);
@@ -103,7 +103,7 @@ export default function HeroScene() {
 
     const smallSphere = new THREE.Mesh(
       new THREE.SphereGeometry(1.0, 16, 16),
-      makeMat(0xfdf4e0, 0.13)
+      makeMat(0xD4B55A, 0.08)
     );
     smallSphere.position.set(4, 4, -6);
     scene.add(smallSphere);

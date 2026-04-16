@@ -1,15 +1,20 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
-import { useReveal, useMagnetic, useRevealChildren } from '../utils/motion';
+import { useReveal, useRevealChildren } from '../utils/motion';
+import HeroScene from '../components/HeroScene';
 
+/* High-quality lifestyle photos for each category.
+   Using Unsplash CDN with crop/resize params for optimal loading.
+   Replace with your own product photography when ready — the gradient
+   overlay keeps text readable on any image. */
 const categories = [
-  { name: 'Shoes', slug: 'shoes', color: 'pink', image: 'https://placehold.co/480x600/FF3ECB/ffffff?text=SHOES&font=montserrat' },
-  { name: 'Girls', slug: 'girls', color: 'purple', image: 'https://placehold.co/480x600/A855F7/ffffff?text=GIRLS&font=montserrat' },
-  { name: 'Boys', slug: 'boys', color: 'blue', image: 'https://placehold.co/480x600/3B82F6/ffffff?text=BOYS&font=montserrat' },
-  { name: 'Sets Girls', slug: 'sets-girls', color: 'coral', image: 'https://placehold.co/480x600/FF6B6B/ffffff?text=SETS+GIRLS&font=montserrat' },
-  { name: 'Sets Boys', slug: 'sets-boys', color: 'green', image: 'https://placehold.co/480x600/22D366/ffffff?text=SETS+BOYS&font=montserrat' },
-  { name: 'Babies', slug: 'babies', color: 'orange', image: 'https://placehold.co/480x600/FF6B2C/ffffff?text=BABIES&font=montserrat' },
+  { name: 'Shoes',     slug: 'shoes',     image: 'https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=600&h=750&fit=crop&q=80' },
+  { name: 'Girls',     slug: 'girls',     image: 'https://images.unsplash.com/photo-1518831959646-742c3a14ebf7?w=600&h=750&fit=crop&q=80' },
+  { name: 'Boys',      slug: 'boys',      image: 'https://images.unsplash.com/photo-1503919545889-aef636e10ad4?w=600&h=750&fit=crop&q=80' },
+  { name: 'Sets Girls', slug: 'sets-girls', image: 'https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=600&h=750&fit=crop&q=80' },
+  { name: 'Sets Boys', slug: 'sets-boys',  image: 'https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=600&h=750&fit=crop&q=80' },
+  { name: 'Babies',    slug: 'babies',     image: 'https://images.unsplash.com/photo-1519689680058-324335c77eba?w=600&h=750&fit=crop&q=80' },
 ];
 
 const marqueeItems = [
@@ -17,8 +22,6 @@ const marqueeItems = [
   'New Collection', 'Lebanon + Worldwide', 'Kids Fashion', 'Free Delivery $50+', 'Cash on Delivery', 'Visa Accepted',
 ];
 
-// Merge refs utility — lets us attach multiple refs to one DOM element
-// (e.g. magnetic AND reveal on the same button)
 function mergeRefs(...refs) {
   return (node) => refs.forEach((r) => {
     if (typeof r === 'function') r(node);
@@ -27,32 +30,31 @@ function mergeRefs(...refs) {
 }
 
 export default function Home() {
-  const magneticRef = useMagnetic(0.3);
   const [catRef, catVisible] = useReveal();
   const [infoRef, infoVisible] = useReveal();
   const gridRef = useRevealChildren('.category-card');
 
   return (
     <div className="fade-in">
-      {/* Animated gradient blobs behind hero */}
       <section className="hero hero-with-blobs">
         <div className="hero-blobs" aria-hidden="true">
           <div className="blob blob-1" />
           <div className="blob blob-2" />
           <div className="blob blob-3" />
         </div>
+        {/* Subtle 3D floating shapes — hidden on mobile via width check */}
+        <HeroScene />
         <div className="hero-badge">New Collection 2026</div>
         <h1>
-          <span className="hero-text-line">Style For</span><br />
-          <span className="line2 hero-text-line">Little</span><br />
-          <span className="line3 hero-text-line">Icons</span>
+          Style For<br />
+          <span className="line2">Little</span><br />
+          <span className="line3">Icons</span>
         </h1>
         <p className="hero-sub">
           Curated kids fashion with bold colors and playful designs.
           Quality pieces for every little personality.
         </p>
-        <Link to="/category/girls" className="hero-btn magnetic" ref={magneticRef}>
-          <span className="btn-shine" />
+        <Link to="/category/girls" className="hero-btn">
           Shop Now <ArrowRight size={18} />
         </Link>
       </section>
@@ -81,8 +83,7 @@ export default function Home() {
           {categories.map((cat, i) => (
             <Link
               to={`/category/${cat.slug}`}
-              className="category-card reveal tilt-card"
-              data-color={cat.color}
+              className="category-card reveal"
               key={i}
             >
               <div className="category-image-wrap">

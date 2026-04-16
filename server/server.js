@@ -449,6 +449,64 @@ async function decrementStock(items) {
   }
 }
 
+// ============================================================
+// ORDER NOTIFICATIONS — Telegram + Email (Resend)
+// Fire-and-forget: never block or fail the order response.
+// ============================================================
+async function notifyOrder(order) {
+  const items = order.items || [];
+  const c = order.customer || {};
+  const itemLines = items.map(i =>
+    `  • ${i.name || 'Item'} (x${i.quantity}) — $${(Number(i.price) * Number(i.quantity)).toFixed(2)}${i.size ? ` [${i.size}]` : ''}`
+  ).join('\n');
+
+  const text = [
+    `🛒 NEW ORDER — KidsModa`,
+    ``,
+    `Order ID: ${order.id || order._id}`,
+    `Status: ${order.status || 'pending'}`,
+    `Payment: ${(c.payment || 'cod').toUpperCase()}`,
+    ``,
+    `👤 Customer`,
+    `  Name: ${c.name}`,
+    `  Email: ${c.email}`,
+    `  Phone: ${c.phone}`,
+    `  Address: ${c.address}, ${c.city}, ${c.country}`,
+    ``,
+    `📦 Items`,
+    itemLines,
+    ``,
+    `💰 Total: $${Number(order.total).toFixed(2)}`,
+  ].join('\n');
+
+  // --- Telegram ---
+  const tgToken = process.env.TELEGRAM_BOT_TOKEN;
+  const tgChat = process.env.TELEGRAM_CHAT_ID;
+  if (tgToken && tgChat) {
+    fetch(`https://api.telegram.org/bot${tgToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: tgChat, text, parse_mode: 'HTML' }),
+    }).catch(err => console.error('Telegram notify failed:', err.message));
+  }
+
+  // --- Email via Resend ---
+  const resendKey = process.env.RESEND_API_KEY;
+  const notifyEmail = process.env.NOTIFY_EMAIL;
+  if (resendKey && notifyEmail) {
+    fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${resendKey}` },
+      body: JSON.stringify({
+        from: 'KidsModa Orders <onboarding@resend.dev>',
+        to: [notifyEmail],
+        subject: `New Order #${(order.id || order._id || '').slice(0, 8)} — $${Number(order.total).toFixed(2)}`,
+        html: `<pre style="font-family:monospace;font-size:14px;line-height:1.6">${text.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>`,
+      }),
+    }).catch(err => console.error('Email notify failed:', err.message));
+  }
+}
+
 // Light-weight field validation for customer info
 function validateCustomer(c) {
   if (!c || typeof c !== 'object') return 'Customer info missing';
@@ -480,6 +538,7 @@ app.post('/api/orders', async (req, res) => {
     // COD orders decrement stock immediately — Stripe orders wait for the
     // payment confirmation poll to avoid burning inventory on abandoned carts.
     await decrementStock(items);
+    notifyOrder(order); // fire-and-forget — don't await
     res.json(order);
   } catch (e) {
     console.error('Order create failed:', e);
@@ -556,7 +615,7 @@ app.get('/api/checkout/session/:id', async (req, res) => {
       const orderData = JSON.parse(session.metadata.orderData);
       const existing = await Order.findOne({ stripeSessionId: session.id });
       if (!existing) {
-        await Order.create({
+        const order = await Order.create({
           ...orderData,
           customer: { ...orderData.customer, payment: 'visa' },
           status: 'confirmed',
@@ -564,6 +623,7 @@ app.get('/api/checkout/session/:id', async (req, res) => {
         });
         // Decrement stock ONCE, on the first confirmation observation.
         await decrementStock(orderData.items || []);
+        notifyOrder(order); // fire-and-forget
       }
       return res.json({ status: 'paid' });
     }

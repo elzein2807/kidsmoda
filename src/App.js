@@ -6,6 +6,7 @@ import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
 import ErrorBoundary from './components/ErrorBoundary';
+import ScrollProgress from './components/ScrollProgress';
 import Home from './pages/Home';
 import { API } from './utils/image';
 import './App.css';
@@ -103,6 +104,7 @@ function App() {
               path="*"
               element={
                 <>
+                  <ScrollProgress />
                   <Navbar />
                   <Suspense fallback={<PageFallback />}>
                     <Routes>

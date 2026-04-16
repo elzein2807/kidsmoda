@@ -542,6 +542,245 @@ img { display: block; max-width: 100%; }
   .navbar { justify-content: space-between; }
 }
 
+/* ==========================================================
+   2026 ANIMATIONS — scroll reveal, 3D tilt, magnetic buttons,
+   gradient blobs, glass navbar, progress bar, shine sweep,
+   Ken Burns, marquee-hover-pause
+   ========================================================== */
+
+/* ---------- SCROLL PROGRESS BAR ---------- */
+.scroll-progress {
+  position: fixed; top: 0; left: 0; width: 100%; height: 3px;
+  z-index: 1100; pointer-events: none;
+  background: transparent;
+}
+.scroll-progress-bar {
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, var(--pink), var(--purple), var(--blue));
+  transform-origin: left;
+  will-change: transform;
+}
+
+/* ---------- SCROLL REVEAL ---------- */
+/* Elements with .reveal start invisible and slide up when
+   IntersectionObserver adds .in-view. Each child can have a
+   --stagger custom prop for cascade timing. */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition:
+    opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1) var(--stagger, 0ms),
+    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1) var(--stagger, 0ms);
+  will-change: opacity, transform;
+}
+.reveal.in-view {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Sections that contain reveal children — own entrance */
+.reveal-section .categories-header,
+.reveal-section .info-grid {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.reveal-section.in-view .categories-header,
+.reveal-section.in-view .info-grid {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ---------- 3D TILT ---------- */
+.tilt-card {
+  --tilt-rx: 0deg;
+  --tilt-ry: 0deg;
+  transform-style: preserve-3d;
+  transition:
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.25s ease;
+}
+/* On hover the base translate + tilt combine. The translate comes from
+   the existing neobrutalist hover (defined above) so we only layer the
+   perspective rotation here. */
+@media (hover: hover) {
+  .tilt-card:hover {
+    transform:
+      translate(-3px, -3px)
+      perspective(600px)
+      rotateX(var(--tilt-rx))
+      rotateY(var(--tilt-ry));
+  }
+}
+
+/* ---------- MAGNETIC BUTTON ---------- */
+.magnetic {
+  --mag-x: 0px;
+  --mag-y: 0px;
+  transform: translate(var(--mag-x), var(--mag-y));
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), background 0.15s, box-shadow 0.15s;
+}
+@media (hover: hover) {
+  .magnetic:hover {
+    transform: translate(
+      calc(var(--mag-x) - 2px),
+      calc(var(--mag-y) - 2px)
+    );
+  }
+}
+
+/* ---------- BUTTON SHINE SWEEP ---------- */
+/* A diagonal light streak that crosses the button on hover. */
+.btn-shine {
+  position: absolute; inset: 0; overflow: hidden; pointer-events: none;
+}
+.btn-shine::after {
+  content: '';
+  position: absolute; top: -50%; left: -60%; width: 40%; height: 200%;
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    rgba(255,255,255,0.25) 45%,
+    rgba(255,255,255,0.35) 50%,
+    rgba(255,255,255,0.25) 55%,
+    transparent 60%
+  );
+  transform: translateX(-100%);
+  transition: none;
+}
+.hero-btn { position: relative; overflow: hidden; }
+@media (hover: hover) {
+  .hero-btn:hover .btn-shine::after {
+    transform: translateX(320%);
+    transition: transform 0.65s ease;
+  }
+}
+
+/* ---------- HERO GRADIENT BLOBS ---------- */
+.hero-with-blobs { position: relative; overflow: hidden; }
+.hero-blobs {
+  position: absolute; inset: 0; pointer-events: none; z-index: 0;
+  filter: blur(80px);
+  opacity: 0.35;
+}
+.hero-with-blobs > *:not(.hero-blobs) { position: relative; z-index: 1; }
+
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  will-change: transform;
+}
+.blob-1 {
+  width: 420px; height: 420px;
+  background: var(--pink);
+  top: -10%; left: -8%;
+  animation: blobFloat1 12s ease-in-out infinite alternate;
+}
+.blob-2 {
+  width: 350px; height: 350px;
+  background: var(--blue);
+  top: 15%; right: -5%;
+  animation: blobFloat2 14s ease-in-out infinite alternate;
+}
+.blob-3 {
+  width: 300px; height: 300px;
+  background: var(--yellow);
+  bottom: -15%; left: 30%;
+  animation: blobFloat3 10s ease-in-out infinite alternate;
+}
+@keyframes blobFloat1 {
+  0%   { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(60px, 40px) scale(1.15); }
+}
+@keyframes blobFloat2 {
+  0%   { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(-50px, 30px) scale(1.1); }
+}
+@keyframes blobFloat3 {
+  0%   { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(30px, -40px) scale(1.2); }
+}
+
+/* ---------- HERO TEXT SHIMMER ---------- */
+.hero-text-line {
+  display: inline-block;
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+.hero h1 .line2.hero-text-line {
+  background-image: linear-gradient(90deg, var(--pink) 0%, var(--purple) 50%, var(--pink) 100%);
+  -webkit-text-fill-color: transparent;
+  animation: textShimmer 4s linear infinite;
+}
+.hero h1 .line3.hero-text-line {
+  background-image: linear-gradient(90deg, var(--blue) 0%, var(--purple) 50%, var(--blue) 100%);
+  -webkit-text-fill-color: transparent;
+  animation: textShimmer 5s linear infinite;
+}
+@keyframes textShimmer {
+  0%   { background-position: 0% center; }
+  100% { background-position: 200% center; }
+}
+
+/* ---------- GLASS NAVBAR (when scrolled) ---------- */
+.navbar.scrolled {
+  background: rgba(255,255,255,0.82);
+  -webkit-backdrop-filter: blur(12px) saturate(1.6);
+  backdrop-filter: blur(12px) saturate(1.6);
+  box-shadow: 0 4px 24px rgba(17,17,17,0.08);
+}
+
+/* ---------- KEN BURNS on category/product images ---------- */
+@keyframes kenBurns {
+  0%   { transform: scale(1);    }
+  100% { transform: scale(1.06); }
+}
+.category-image {
+  animation: kenBurns 20s ease-in-out infinite alternate;
+}
+/* Hover zoom overrides Ken Burns */
+.category-card:hover .category-image {
+  animation: none;
+  transform: scale(1.08);
+}
+
+/* ---------- MARQUEE HOVER PAUSE ---------- */
+.marquee:hover .marquee-track {
+  animation-play-state: paused;
+}
+
+/* ---------- INFO BANNER ITEMS stagger entrance ---------- */
+.info-item {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.45s ease var(--info-delay, 0ms),
+              transform 0.45s ease var(--info-delay, 0ms);
+}
+.reveal-section.in-view .info-item {
+  opacity: 1;
+  transform: translateY(0);
+}
+.info-item:nth-child(1) { --info-delay: 0ms;   }
+.info-item:nth-child(2) { --info-delay: 80ms;  }
+.info-item:nth-child(3) { --info-delay: 160ms; }
+.info-item:nth-child(4) { --info-delay: 240ms; }
+
+/* ---------- Product card hover glow ring ---------- */
+@media (hover: hover) {
+  .product-card::after {
+    content: '';
+    position: absolute; inset: -2px;
+    background: linear-gradient(135deg, var(--pink), var(--blue));
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    filter: blur(8px);
+  }
+  .product-card { position: relative; }
+  .product-card:hover::after { opacity: 0.45; }
+}
+
 /* ==================== REDUCED MOTION ==================== */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -552,6 +791,14 @@ img { display: block; max-width: 100%; }
   }
   .fade-in { animation: none; }
   .marquee-track { animation: none; }
+  .reveal { opacity: 1; transform: none; }
+  .info-item { opacity: 1; transform: none; }
+  .blob { display: none; }
+  .hero-text-line {
+    -webkit-text-fill-color: currentColor;
+    animation: none;
+  }
+  .scroll-progress { display: none; }
 }
 
 /* ==================== FOCUS RINGS (accessibility) ==================== */

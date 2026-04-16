@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
+import { useReveal, useMagnetic, useRevealChildren } from '../utils/motion';
 
 const categories = [
   { name: 'Shoes', slug: 'shoes', color: 'pink', image: 'https://placehold.co/480x600/FF3ECB/ffffff?text=SHOES&font=montserrat' },
@@ -16,21 +17,42 @@ const marqueeItems = [
   'New Collection', 'Lebanon + Worldwide', 'Kids Fashion', 'Free Delivery $50+', 'Cash on Delivery', 'Visa Accepted',
 ];
 
+// Merge refs utility — lets us attach multiple refs to one DOM element
+// (e.g. magnetic AND reveal on the same button)
+function mergeRefs(...refs) {
+  return (node) => refs.forEach((r) => {
+    if (typeof r === 'function') r(node);
+    else if (r) r.current = node;
+  });
+}
+
 export default function Home() {
+  const magneticRef = useMagnetic(0.3);
+  const [catRef, catVisible] = useReveal();
+  const [infoRef, infoVisible] = useReveal();
+  const gridRef = useRevealChildren('.category-card');
+
   return (
     <div className="fade-in">
-      <section className="hero">
+      {/* Animated gradient blobs behind hero */}
+      <section className="hero hero-with-blobs">
+        <div className="hero-blobs" aria-hidden="true">
+          <div className="blob blob-1" />
+          <div className="blob blob-2" />
+          <div className="blob blob-3" />
+        </div>
         <div className="hero-badge">New Collection 2026</div>
         <h1>
-          Style For<br />
-          <span className="line2">Little</span><br />
-          <span className="line3">Icons</span>
+          <span className="hero-text-line">Style For</span><br />
+          <span className="line2 hero-text-line">Little</span><br />
+          <span className="line3 hero-text-line">Icons</span>
         </h1>
         <p className="hero-sub">
           Curated kids fashion with bold colors and playful designs.
           Quality pieces for every little personality.
         </p>
-        <Link to="/category/girls" className="hero-btn">
+        <Link to="/category/girls" className="hero-btn magnetic" ref={magneticRef}>
+          <span className="btn-shine" />
           Shop Now <ArrowRight size={18} />
         </Link>
       </section>
@@ -46,14 +68,23 @@ export default function Home() {
         </div>
       </div>
 
-      <section className="categories" id="categories">
+      <section
+        className={`categories reveal-section ${catVisible ? 'in-view' : ''}`}
+        id="categories"
+        ref={mergeRefs(catRef, gridRef)}
+      >
         <div className="categories-header">
           <div className="categories-label">Shop By Category</div>
           <h2 className="categories-title">Browse Our Collection</h2>
         </div>
         <div className="categories-grid">
           {categories.map((cat, i) => (
-            <Link to={`/category/${cat.slug}`} className="category-card" data-color={cat.color} key={i}>
+            <Link
+              to={`/category/${cat.slug}`}
+              className="category-card reveal tilt-card"
+              data-color={cat.color}
+              key={i}
+            >
               <div className="category-image-wrap">
                 <img className="category-image" src={cat.image} alt={cat.name} loading="lazy" decoding="async" />
               </div>
@@ -68,7 +99,10 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="info-banner">
+      <section
+        className={`info-banner reveal-section ${infoVisible ? 'in-view' : ''}`}
+        ref={infoRef}
+      >
         <div className="info-grid">
           <div className="info-item">
             <h4>Free Delivery $50+</h4>

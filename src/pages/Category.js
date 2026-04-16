@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import { API } from '../utils/image';
+import { useRevealChildren } from '../utils/motion';
 
 const LABELS = {
   shoes: 'Shoes',
@@ -28,6 +29,7 @@ export default function Category() {
   const { slug } = useParams();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const gridRef = useRevealChildren('.product-card');
 
   useEffect(() => {
     let cancelled = false;
@@ -58,7 +60,7 @@ export default function Category() {
           <Link to="/" className="btn-back">Back to Home</Link>
         </div>
       ) : (
-        <div className="products-grid">
+        <div className="products-grid" ref={gridRef}>
           {products.map((p) => (
             <ProductCard key={p._id || p.id} product={p} />
           ))}

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="12" fill="#FBF7F0"/>
+  <path d="M8 44 C 22 26, 42 26, 56 44" fill="none" stroke="#F2684F" stroke-width="5" stroke-linecap="round"/>
+  <path d="M8 51 C 22 33, 42 33, 56 51" fill="none" stroke="#F2C744" stroke-width="5" stroke-linecap="round"/>
+  <path d="M8 58 C 22 40, 42 40, 56 58" fill="none" stroke="#2A54B8" stroke-width="5" stroke-linecap="round"/>
+  <text x="32" y="28" text-anchor="middle" font-family="Georgia, serif" font-size="24" font-weight="600" fill="#1A1719">KM</text>
+</svg>

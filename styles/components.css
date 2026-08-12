@@ -1,0 +1,642 @@
+/* ==========================================================================
+   KIDS MODA — COMPONENT LAYER
+   Every component state (default / hover / active / focus / loading /
+   disabled / error / success) is defined here against the tokens.
+   ========================================================================== */
+
+@layer components {
+  /* ------------------------------------------------------------------
+     FIGURE — the one image primitive
+     ------------------------------------------------------------------ */
+  .km-figure {
+    position: relative;
+    overflow: hidden;
+    background: var(--world-tint, var(--km-porcelain));
+    isolation: isolate;
+  }
+  .km-figure__img,
+  .km-figure__plate {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .km-figure--fill { width: 100%; height: 100%; }
+
+  .km-figure--zoom .km-figure__img,
+  .km-figure--zoom .km-figure__plate {
+    transition: scale var(--km-d-xslow) var(--km-e-standard);
+  }
+  @media (hover: hover) {
+    .km-card:hover .km-figure--zoom .km-figure__img,
+    .km-card:hover .km-figure--zoom .km-figure__plate { scale: 1.045; }
+  }
+
+  /* ------------------------------------------------------------------
+     BUTTONS
+     Rectangular by default with a small radius — pills are reserved for
+     chips and filters, so the interface never reads as bubbly.
+     ------------------------------------------------------------------ */
+  .km-btn {
+    --btn-bg: var(--km-charcoal);
+    --btn-fg: var(--km-ivory);
+    --btn-border: var(--km-charcoal);
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 3rem;              /* 48px — comfortable touch target */
+    padding: 0 1.75rem;
+    border: var(--km-bw-base, 1.5px) solid var(--btn-border);
+    border-radius: var(--km-r-sm);
+    background: var(--btn-bg);
+    color: var(--btn-fg);
+    font-size: var(--km-t-button);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    line-height: 1;
+    cursor: pointer;
+    text-align: center;
+    transition:
+      background var(--km-d-base) var(--km-e-standard),
+      color var(--km-d-base) var(--km-e-standard),
+      border-color var(--km-d-base) var(--km-e-standard),
+      translate var(--km-d-base) var(--km-e-standard);
+  }
+  @media (hover: hover) {
+    .km-btn:hover { background: var(--km-charcoal-soft); border-color: var(--km-charcoal-soft); }
+  }
+  .km-btn:active { translate: 0 1px; }
+
+  .km-btn--outline {
+    --btn-bg: transparent;
+    --btn-fg: var(--km-charcoal);
+    --btn-border: var(--km-charcoal);
+  }
+  @media (hover: hover) {
+    .km-btn--outline:hover { background: var(--km-charcoal); color: var(--km-ivory); }
+  }
+
+  .km-btn--world {
+    --btn-bg: var(--world-ink);
+    --btn-fg: var(--km-ivory);
+    --btn-border: var(--world-ink);
+  }
+  @media (hover: hover) { .km-btn--world:hover { filter: brightness(1.12); } }
+
+  .km-btn--ghost {
+    --btn-bg: transparent;
+    --btn-fg: var(--km-charcoal);
+    --btn-border: transparent;
+    padding-inline: 0.75rem;
+  }
+  @media (hover: hover) { .km-btn--ghost:hover { background: var(--km-porcelain); } }
+
+  .km-btn--inverse {
+    --btn-bg: var(--km-ivory);
+    --btn-fg: var(--km-charcoal);
+    --btn-border: var(--km-ivory);
+  }
+  @media (hover: hover) { .km-btn--inverse:hover { background: var(--km-white); border-color: var(--km-white); } }
+
+  .km-btn--sm { min-height: 2.5rem; padding-inline: 1.125rem; font-size: var(--km-t-caption); }
+  .km-btn--lg { min-height: 3.5rem; padding-inline: 2.25rem; }
+  .km-btn--block { width: 100%; }
+
+  .km-btn:disabled,
+  .km-btn[aria-disabled="true"] {
+    background: var(--km-disabled-bg);
+    color: var(--km-text-disabled);
+    border-color: var(--km-disabled-border);
+    cursor: not-allowed;
+    translate: none;
+  }
+
+  .km-btn[data-loading="true"] { color: transparent; pointer-events: none; }
+  .km-btn[data-loading="true"]::after {
+    content: "";
+    position: absolute;
+    inset: 50% auto auto 50%;
+    width: 1.05rem;
+    height: 1.05rem;
+    margin: -0.525rem 0 0 -0.525rem;
+    border: 2px solid currentcolor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    color: var(--btn-fg);
+    animation: km-spin 620ms linear infinite;
+  }
+  @keyframes km-spin { to { rotate: 360deg; } }
+  @media (prefers-reduced-motion: reduce) {
+    .km-btn[data-loading="true"]::after { animation-duration: 1600ms; }
+  }
+
+  /* Icon button — used in the header and on cards */
+  .km-iconbtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border: 0;
+    border-radius: var(--km-r-pill);
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    transition: background var(--km-d-fast) var(--km-e-standard), color var(--km-d-fast) var(--km-e-standard);
+  }
+  @media (hover: hover) { .km-iconbtn:hover { background: rgb(26 23 25 / 0.06); } }
+  .km-iconbtn[data-active="true"] { color: var(--km-coral-ink); }
+
+  /* ------------------------------------------------------------------
+     LINKS — underline grows from the left on hover
+     ------------------------------------------------------------------ */
+  .km-link {
+    position: relative;
+    display: inline-block;
+    font-weight: 600;
+  }
+  .km-link::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -2px;
+    width: 100%;
+    height: 1.5px;
+    background: currentcolor;
+    scale: 0 1;
+    transform-origin: left;
+    transition: scale var(--km-d-base) var(--km-e-standard);
+  }
+  @media (hover: hover) { .km-link:hover::after { scale: 1 1; } }
+  .km-link--static::after { scale: 1 1; }
+
+  /* ------------------------------------------------------------------
+     CHIPS & BADGES
+     Colour is never the only signal — every badge carries a word.
+     ------------------------------------------------------------------ */
+  .km-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: 2.25rem;
+    padding: 0 0.875rem;
+    border: 1px solid var(--km-border-strong);
+    border-radius: var(--km-r-pill);
+    background: transparent;
+    font-size: var(--km-t-body-sm);
+    font-weight: 500;
+    line-height: 1;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background var(--km-d-fast) var(--km-e-standard),
+                border-color var(--km-d-fast) var(--km-e-standard),
+                color var(--km-d-fast) var(--km-e-standard);
+  }
+  @media (hover: hover) { .km-chip:hover { border-color: var(--km-charcoal); } }
+  .km-chip[aria-pressed="true"],
+  .km-chip[data-selected="true"] {
+    background: var(--km-charcoal);
+    border-color: var(--km-charcoal);
+    color: var(--km-ivory);
+  }
+  .km-chip--world[aria-pressed="true"] { background: var(--world-ink); border-color: var(--world-ink); }
+  .km-chip:disabled { opacity: 0.45; cursor: not-allowed; text-decoration: line-through; }
+
+  .km-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.3rem 0.5rem;
+    border-radius: var(--km-r-xs);
+    font-size: var(--km-t-label);
+    font-weight: 700;
+    letter-spacing: var(--km-ls-label);
+    text-transform: uppercase;
+    line-height: 1;
+  }
+  .km-badge--new      { background: var(--km-cobalt-tint);   color: var(--km-new); }
+  .km-badge--sale     { background: var(--km-coral-tint);    color: var(--km-sale); }
+  .km-badge--best     { background: var(--km-butter-tint);   color: var(--km-butter-ink); }
+  .km-badge--low      { background: var(--km-warning-tint);  color: var(--km-warning); }
+  .km-badge--soldout  { background: var(--km-porcelain);     color: var(--km-soldout); }
+  .km-badge--solid    { background: var(--km-charcoal);      color: var(--km-ivory); }
+
+  /* ------------------------------------------------------------------
+     PRODUCT CARD
+     No box, no border, no shadow — the photograph and the type do the work.
+     ------------------------------------------------------------------ */
+  .km-card { position: relative; display: flex; flex-direction: column; }
+  .km-card__media { position: relative; }
+  .km-card__badges {
+    position: absolute;
+    top: 0.75rem;
+    left: 0.75rem;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.375rem;
+  }
+  .km-card__wish {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    z-index: 2;
+    background: rgb(251 247 240 / 0.86);
+    backdrop-filter: blur(6px);
+  }
+  @media (hover: hover) { .km-card__wish:hover { background: var(--km-ivory); } }
+
+  /* Second image cross-fades in on hover — the standard fashion behaviour */
+  .km-card__alt {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity var(--km-d-slow) var(--km-e-standard);
+  }
+  @media (hover: hover) {
+    .km-card:hover .km-card__alt { opacity: 1; }
+  }
+
+  /* Quick add slides up over the base of the image on hover (desktop only) */
+  .km-card__quick {
+    position: absolute;
+    left: 0.5rem;
+    right: 0.5rem;
+    bottom: 0.5rem;
+    z-index: 2;
+    opacity: 0;
+    translate: 0 8px;
+    transition: opacity var(--km-d-base) var(--km-e-standard),
+                translate var(--km-d-base) var(--km-e-entrance);
+  }
+  @media (hover: hover) {
+    .km-card:hover .km-card__quick,
+    .km-card:focus-within .km-card__quick { opacity: 1; translate: 0 0; }
+  }
+  @media (hover: none) { .km-card__quick { display: none; } }
+
+  .km-card__body { padding-top: 0.875rem; display: flex; flex-direction: column; gap: 0.3rem; }
+  .km-card__brand {
+    font-size: var(--km-t-label);
+    letter-spacing: var(--km-ls-label);
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--km-text-muted);
+  }
+  .km-card__name {
+    font-family: var(--km-font-display);
+    font-size: var(--km-t-h6);
+    font-weight: 600;
+    letter-spacing: var(--km-ls-heading);
+    line-height: 1.25;
+  }
+  /* The whole card is clickable, but only the name is the accessible link */
+  .km-card__link::before { content: ""; position: absolute; inset: 0; z-index: 1; }
+
+  .km-price { display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; }
+  .km-price__usd { font-size: var(--km-t-price); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .km-price__was {
+    font-size: var(--km-t-body-sm);
+    color: var(--km-text-muted);
+    text-decoration: line-through;
+    font-variant-numeric: tabular-nums;
+  }
+  .km-price__lbp {
+    font-size: var(--km-t-caption);
+    color: var(--km-text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .km-price--sale .km-price__usd { color: var(--km-sale); }
+
+  .km-swatches { display: flex; align-items: center; gap: 0.3rem; }
+  .km-swatch {
+    width: 0.85rem;
+    height: 0.85rem;
+    border-radius: var(--km-r-pill);
+    border: 1px solid rgb(26 23 25 / 0.18);
+    padding: 0;
+    cursor: pointer;
+  }
+  .km-swatch[data-selected="true"] { box-shadow: 0 0 0 2px var(--km-bg), 0 0 0 3.5px var(--km-charcoal); }
+  .km-swatch--lg { width: 2rem; height: 2rem; }
+
+  /* ------------------------------------------------------------------
+     FORMS
+     ------------------------------------------------------------------ */
+  .km-field { display: flex; flex-direction: column; gap: 0.4rem; }
+  .km-label {
+    font-size: var(--km-t-body-sm);
+    font-weight: 600;
+    color: var(--km-text-secondary);
+  }
+  .km-input,
+  .km-select,
+  .km-textarea {
+    width: 100%;
+    min-height: 3rem;
+    padding: 0.75rem 0.9rem;
+    border: 1.5px solid var(--km-border-strong);
+    border-radius: var(--km-r-sm);
+    background: var(--km-white);
+    font-size: var(--km-t-form);
+    color: var(--km-text);
+    transition: border-color var(--km-d-fast) var(--km-e-standard),
+                background var(--km-d-fast) var(--km-e-standard);
+  }
+  .km-textarea { min-height: 6rem; resize: vertical; line-height: 1.5; }
+  .km-input::placeholder, .km-textarea::placeholder { color: var(--km-text-disabled); }
+  .km-input:hover, .km-select:hover, .km-textarea:hover { border-color: var(--km-charcoal-mute); }
+  .km-input[aria-invalid="true"],
+  .km-select[aria-invalid="true"],
+  .km-textarea[aria-invalid="true"] { border-color: var(--km-error); background: var(--km-error-tint); }
+  .km-input:disabled, .km-select:disabled, .km-textarea:disabled {
+    background: var(--km-disabled-bg);
+    color: var(--km-text-disabled);
+    cursor: not-allowed;
+  }
+  .km-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' fill='none' stroke='%234a4550' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.9rem center;
+    background-size: 12px;
+    padding-right: 2.5rem;
+  }
+  /* Errors are announced and iconised, never colour alone */
+  .km-error {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: var(--km-t-body-sm);
+    color: var(--km-error);
+    font-weight: 500;
+  }
+  .km-error::before { content: "!"; display: grid; place-items: center;
+    width: 1rem; height: 1rem; border-radius: 50%;
+    background: var(--km-error); color: var(--km-white);
+    font-size: 0.7rem; font-weight: 700; flex: none; }
+  .km-hint { font-size: var(--km-t-body-sm); color: var(--km-text-muted); }
+
+  /* ------------------------------------------------------------------
+     NOTES / CALLOUTS
+     ------------------------------------------------------------------ */
+  .km-note {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.875rem 1rem;
+    border-radius: var(--km-r-md);
+    font-size: var(--km-t-body-sm);
+    line-height: 1.5;
+  }
+  .km-note--info    { background: var(--km-info-tint);    color: var(--km-info); }
+  .km-note--success { background: var(--km-success-tint); color: var(--km-success); }
+  .km-note--warning { background: var(--km-warning-tint); color: var(--km-warning); }
+  .km-note--error   { background: var(--km-error-tint);   color: var(--km-error); }
+
+  /* ------------------------------------------------------------------
+     SKELETONS — a slow warm shimmer, never a flashing pulse
+     ------------------------------------------------------------------ */
+  .km-skeleton {
+    position: relative;
+    overflow: hidden;
+    background: var(--km-porcelain-warm);
+    border-radius: var(--km-r-sm);
+  }
+  .km-skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    translate: -100% 0;
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.62), transparent);
+    animation: km-shimmer 1.5s var(--km-e-standard) infinite;
+  }
+  @keyframes km-shimmer { to { translate: 100% 0; } }
+  @media (prefers-reduced-motion: reduce) {
+    .km-skeleton::after { animation: none; opacity: 0.4; }
+  }
+
+  /* ------------------------------------------------------------------
+     DRAWER & MODAL
+     ------------------------------------------------------------------ */
+  .km-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: var(--km-z-drawer);
+    background: rgb(26 23 25 / 0.42);
+    backdrop-filter: blur(2px);
+    animation: km-fade var(--km-d-base) var(--km-e-standard);
+  }
+  @keyframes km-fade { from { opacity: 0; } }
+
+  .km-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: calc(var(--km-z-drawer) + 1);
+    display: flex;
+    flex-direction: column;
+    width: min(28rem, 100vw);
+    background: var(--km-ivory);
+    box-shadow: var(--km-e-5);
+    animation: km-slide-in var(--km-d-slow) var(--km-e-entrance);
+  }
+  @keyframes km-slide-in { from { translate: 100% 0; } }
+  @media (max-width: 767px) {
+    .km-drawer { width: 100vw; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .km-drawer { animation: km-fade var(--km-d-fast) linear; }
+  }
+  .km-drawer__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.25rem var(--km-s-5);
+    border-bottom: 1px solid var(--km-border);
+  }
+  .km-drawer__body { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: var(--km-s-5); }
+  .km-drawer__foot {
+    padding: var(--km-s-5);
+    padding-bottom: max(var(--km-s-5), env(safe-area-inset-bottom));
+    border-top: 1px solid var(--km-border);
+    background: var(--km-white);
+  }
+
+  /* Mobile bottom sheet — filters, size pickers */
+  .km-sheet {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: calc(var(--km-z-drawer) + 1);
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--km-ivory);
+    border-radius: var(--km-r-xl) var(--km-r-xl) 0 0;
+    box-shadow: var(--km-e-5);
+    animation: km-sheet-up var(--km-d-slow) var(--km-e-entrance);
+  }
+  @keyframes km-sheet-up { from { translate: 0 100%; } }
+  @media (prefers-reduced-motion: reduce) { .km-sheet { animation: km-fade var(--km-d-fast) linear; } }
+
+  /* ------------------------------------------------------------------
+     TABLES — admin
+     ------------------------------------------------------------------ */
+  .km-table { width: 100%; border-collapse: collapse; font-size: var(--km-t-data); }
+  .km-table th {
+    text-align: left;
+    font-weight: 700;
+    font-size: var(--km-t-label);
+    letter-spacing: var(--km-ls-label);
+    text-transform: uppercase;
+    color: var(--km-text-muted);
+    padding: 0.75rem 0.75rem;
+    border-bottom: 1px solid var(--km-border-strong);
+    white-space: nowrap;
+  }
+  .km-table td {
+    padding: 0.8rem 0.75rem;
+    border-bottom: 1px solid var(--km-border);
+    vertical-align: middle;
+  }
+  .km-table tbody tr { transition: background var(--km-d-fast) linear; }
+  @media (hover: hover) { .km-table tbody tr:hover { background: var(--km-porcelain); } }
+  .km-table__num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* ------------------------------------------------------------------
+     RIBBON — the Kids Moda signature. Used sparingly.
+     ------------------------------------------------------------------ */
+  .km-ribbon { display: block; width: 100%; height: auto; pointer-events: none; }
+  .km-ribbon path { stroke-linecap: round; fill: none; }
+
+  /* Bands draw on in sequence, like fabric being pulled taut */
+  html.km-js [data-reveal]:not([data-revealed]) .km-ribbon--draw path {
+    stroke-dasharray: 1600;
+    stroke-dashoffset: 1600;
+  }
+  .km-ribbon--draw path {
+    stroke-dasharray: 1600;
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset var(--km-d-reveal) var(--km-e-ribbon);
+    transition-delay: calc(var(--band) * var(--km-stagger));
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html.km-js [data-reveal]:not([data-revealed]) .km-ribbon--draw path { stroke-dashoffset: 0; }
+  }
+
+  /* Parallax layers — driven by a CSS variable set from a rAF loop */
+  .km-parallax { will-change: transform; translate: 0 calc(var(--km-parallax, 0) * 1px); }
+  @media (prefers-reduced-motion: reduce) { .km-parallax { translate: none; } }
+}
+
+/* ==========================================================================
+   THE OPENING
+   ========================================================================== */
+@layer components {
+  /* Painted before React mounts, so the homepage never flashes underneath */
+  html[data-intro]::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: var(--km-ivory);
+    z-index: var(--km-z-opening);
+  }
+  html[data-intro] body { overflow: hidden; }
+
+  .km-opening {
+    position: fixed;
+    inset: 0;
+    z-index: calc(var(--km-z-opening) + 1);
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    background: var(--km-ivory);
+  }
+
+  .km-opening__field {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(60px);
+    pointer-events: none;
+  }
+  .km-opening__field--a {
+    width: 62vmax; height: 62vmax;
+    top: -18vmax; left: -14vmax;
+    background: radial-gradient(circle, var(--km-butter-tint) 0%, transparent 68%);
+  }
+  .km-opening__field--b {
+    width: 56vmax; height: 56vmax;
+    right: -16vmax; bottom: -18vmax;
+    background: radial-gradient(circle, var(--km-turquoise-tint) 0%, transparent 68%);
+  }
+
+  .km-opening__curtain { position: absolute; inset: 0; pointer-events: none; }
+  .km-opening__band {
+    position: absolute;
+    left: -5%;
+    width: 110%;
+    border-radius: var(--km-r-pill);
+    will-change: transform;
+  }
+
+  .km-opening__mark {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    padding-inline: var(--km-margin);
+    will-change: transform;
+  }
+  .km-opening__word {
+    display: block;
+    font-family: var(--km-font-display);
+    font-size: clamp(2.75rem, 11vw, 8rem);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: var(--km-charcoal);
+    white-space: nowrap;
+  }
+  .km-opening__word em { font-style: italic; font-weight: 300; }
+
+  .km-opening__arc {
+    display: block;
+    width: min(72vw, 26rem);
+    height: auto;
+    margin: 0.75rem auto 0;
+  }
+
+  .km-opening__tagline {
+    margin-top: 1rem;
+    font-size: var(--km-t-body-sm);
+    letter-spacing: var(--km-ls-nav);
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--km-charcoal-soft);
+  }
+
+  .km-opening__skip {
+    position: absolute;
+    right: var(--km-margin);
+    bottom: 2rem;
+    z-index: 3;
+    min-height: 2.75rem;
+    padding: 0 1rem;
+    border: 1px solid var(--km-border-strong);
+    border-radius: var(--km-r-pill);
+    background: transparent;
+    color: var(--km-charcoal-soft);
+    font-size: var(--km-t-caption);
+    font-weight: 600;
+    letter-spacing: var(--km-ls-nav);
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  @media (hover: hover) {
+    .km-opening__skip:hover { background: var(--km-charcoal); color: var(--km-ivory); border-color: var(--km-charcoal); }
+  }
+}

@@ -1,0 +1,319 @@
+/* ==========================================================================
+   KIDS MODA — DESIGN TOKENS
+   "The Living Rainbow Wardrobe"
+
+   Single source of truth. No component may hardcode a colour, radius,
+   duration, shadow or spacing value. Everything below is also exposed to
+   Tailwind v4 through @theme in globals.css.
+   ========================================================================== */
+
+:root {
+  /* ---------------------------------------------------------------------
+     1 · NEUTRAL FOUNDATION — the brand lives on warm paper, never cold white
+     --------------------------------------------------------------------- */
+  --km-ivory: #fbf7f0;
+  --km-ivory-deep: #f5efe4;
+  --km-porcelain: #f3eee6;
+  --km-porcelain-warm: #ede6da;
+  --km-white: #ffffff;
+  --km-charcoal: #1a1719;
+  --km-charcoal-soft: #4a4550;
+  --km-charcoal-mute: #78707c;
+  --km-charcoal-ghost: #a9a2ae;
+
+  /* ---------------------------------------------------------------------
+     2 · BRAND RAINBOW
+     Three tiers per hue, and only these are allowed:
+       base  → large colour fields, ribbons, washes
+       ink   → the ONLY value permitted for text/icons on ivory (≥ 4.5:1)
+       tint  → chips, hovers, skeletons, soft backgrounds
+     --------------------------------------------------------------------- */
+  --km-coral: #f2684f;         --km-coral-ink: #a8341f;         --km-coral-tint: #fbe3de;
+  --km-blush: #f2a9a0;         --km-blush-ink: #9c3f38;         --km-blush-tint: #fceae8;
+  --km-strawberry: #e8577f;    --km-strawberry-ink: #a32449;    --km-strawberry-tint: #fce3ea;
+  --km-tangerine: #f08a2e;     --km-tangerine-ink: #8a4a08;     --km-tangerine-tint: #fcead8;
+  --km-butter: #f2c744;        --km-butter-ink: #6b5205;        --km-butter-tint: #fbf1d4;
+  --km-lime: #a8c93a;          --km-lime-ink: #4c5c12;          --km-lime-tint: #eef4d8;
+  --km-sage: #6e9b7a;          --km-sage-ink: #2f5c3e;          --km-sage-tint: #e4ede6;
+  --km-turquoise: #3fb8ab;     --km-turquoise-ink: #15605a;     --km-turquoise-tint: #ddf0ed;
+  --km-sky: #63b3d9;           --km-sky-ink: #14556f;           --km-sky-tint: #e0eff6;
+  --km-cobalt: #2a54b8;        --km-cobalt-ink: #1d3e8c;        --km-cobalt-tint: #dee5f6;
+  --km-lilac: #a38ad1;         --km-lilac-ink: #5b3f8a;         --km-lilac-tint: #ece6f5;
+
+  /* ---------------------------------------------------------------------
+     3 · SEMANTIC ROLES — components reference these, never raw hues
+     --------------------------------------------------------------------- */
+  --km-bg: var(--km-ivory);
+  --km-bg-alt: var(--km-ivory-deep);
+  --km-surface: var(--km-white);
+  --km-surface-sunken: var(--km-porcelain);
+  --km-surface-inverse: var(--km-charcoal);
+
+  --km-text: var(--km-charcoal);
+  --km-text-secondary: var(--km-charcoal-soft);
+  --km-text-muted: var(--km-charcoal-mute);
+  --km-text-disabled: var(--km-charcoal-ghost);
+  --km-text-inverse: var(--km-ivory);
+
+  --km-border: #e2dace;
+  --km-border-strong: #c9bfb1;
+  --km-border-inverse: rgb(251 247 240 / 0.22);
+
+  --km-success: #2f7d4f;  --km-success-tint: #e2f0e7;
+  --km-warning: #b26a00;  --km-warning-tint: #fbeeda;
+  --km-error: #c3382b;    --km-error-tint: #fbe4e1;
+  --km-info: #1d6fa8;     --km-info-tint: #e1eff8;
+  --km-focus: #2a54b8;
+  --km-focus-inverse: #f2c744;
+  --km-disabled-bg: #ede8e0;
+  --km-disabled-border: #dbd3c8;
+
+  /* Commerce semantics — always paired with a text label, never colour alone */
+  --km-sale: var(--km-coral-ink);
+  --km-new: var(--km-cobalt-ink);
+  --km-lowstock: var(--km-warning);
+  --km-soldout: var(--km-charcoal-mute);
+
+  /* ---------------------------------------------------------------------
+     4 · COLOUR WORLDS
+     Set with data-world on any section. Children only ever read --world*.
+     The full rainbow never appears inside a single component.
+
+     Boys and Girls each carry the whole Kids Moda personality — the split
+     is a shift in temperature and rhythm, not "blue boys / pink girls".
+     --------------------------------------------------------------------- */
+  --world: var(--km-cobalt);
+  --world-ink: var(--km-cobalt-ink);
+  --world-tint: var(--km-cobalt-tint);
+  --world-2: var(--km-butter);
+  --world-3: var(--km-coral);
+  --world-wash: radial-gradient(120% 90% at 18% 0%, color-mix(in oklab, var(--km-butter) 30%, transparent) 0%, transparent 62%),
+                radial-gradient(95% 75% at 94% 92%, color-mix(in oklab, var(--km-cobalt) 22%, transparent) 0%, transparent 60%);
+}
+
+/* GIRLS — warmer, softer light; coral leads, sage and butter keep it fresh */
+[data-world="girls"] {
+  --world: var(--km-coral);
+  --world-ink: var(--km-coral-ink);
+  --world-tint: var(--km-coral-tint);
+  --world-2: var(--km-lilac);
+  --world-3: var(--km-butter);
+  --world-wash: radial-gradient(115% 88% at 78% 0%, color-mix(in oklab, var(--km-strawberry) 30%, transparent) 0%, transparent 62%),
+                radial-gradient(95% 72% at 4% 94%, color-mix(in oklab, var(--km-butter) 34%, transparent) 0%, transparent 58%);
+}
+
+/* BOYS — cooler, brighter light; cobalt leads, lime and tangerine cut through */
+[data-world="boys"] {
+  --world: var(--km-cobalt);
+  --world-ink: var(--km-cobalt-ink);
+  --world-tint: var(--km-cobalt-tint);
+  --world-2: var(--km-turquoise);
+  --world-3: var(--km-lime);
+  --world-wash: radial-gradient(115% 88% at 20% 0%, color-mix(in oklab, var(--km-turquoise) 30%, transparent) 0%, transparent 62%),
+                radial-gradient(95% 72% at 96% 92%, color-mix(in oklab, var(--km-lime) 32%, transparent) 0%, transparent 58%);
+}
+
+/* AGE SUB-WORLDS — used inside Boys/Girls to colour age chapters */
+[data-age="0-2"]   { --world: var(--km-blush);                  --world-ink: var(--km-blush-ink);     --world-tint: var(--km-blush-tint); }
+[data-age="2-5"]   { --world: var(--km-tangerine);              --world-ink: var(--km-tangerine-ink); --world-tint: var(--km-tangerine-tint); }
+[data-age="6-9"]   { --world: var(--km-sage);                   --world-ink: var(--km-sage-ink);      --world-tint: var(--km-sage-tint); }
+[data-age="10-14"] { --world: var(--km-cobalt);                 --world-ink: var(--km-cobalt-ink);    --world-tint: var(--km-cobalt-tint); }
+
+[data-world="sale"] {
+  --world: var(--km-coral);
+  --world-ink: var(--km-coral-ink);
+  --world-tint: var(--km-coral-tint);
+  --world-2: var(--km-tangerine);
+  --world-3: var(--km-strawberry);
+  --world-wash: linear-gradient(102deg, color-mix(in oklab, var(--km-coral) 30%, transparent) 0%, transparent 48%, color-mix(in oklab, var(--km-tangerine) 30%, transparent) 100%);
+}
+[data-world="journal"] {
+  --world: var(--km-butter);
+  --world-ink: var(--km-butter-ink);
+  --world-tint: var(--km-butter-tint);
+  --world-2: var(--km-sage);
+  --world-3: var(--km-turquoise);
+  --world-wash: radial-gradient(110% 80% at 50% 0%, color-mix(in oklab, var(--km-butter) 36%, transparent) 0%, transparent 60%);
+}
+/* FILM — the one place the whole rainbow is allowed, because the brand film
+   is where the identity is stated rather than applied. */
+[data-world="film"] {
+  --world: var(--km-turquoise);
+  --world-ink: var(--km-turquoise-ink);
+  --world-tint: var(--km-turquoise-tint);
+  --world-2: var(--km-butter);
+  --world-3: var(--km-coral);
+  --world-wash: none;
+}
+[data-world="neutral"] {
+  --world: var(--km-charcoal);
+  --world-ink: var(--km-charcoal);
+  --world-tint: var(--km-porcelain);
+  --world-2: var(--km-charcoal-soft);
+  --world-3: var(--km-charcoal-mute);
+  --world-wash: none;
+}
+
+/* ==========================================================================
+   5 · TYPOGRAPHY
+   Display  — Fraunces: variable optical size + soft/wonk axes. Editorial and
+              expressive; playful through COMPOSITION, never bubble letterforms.
+   Interface — Inter: variable, tabular numerals for prices and dashboard data.
+   ========================================================================== */
+:root {
+  --km-font-display: var(--font-fraunces), "Recoleta", Georgia, "Times New Roman", serif;
+  --km-font-ui: var(--font-inter), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  /* Fluid editorial scale */
+  --km-t-hero: clamp(3.25rem, 9.2vw, 9.25rem);
+  --km-t-section: clamp(2.5rem, 5.6vw, 5.5rem);
+  --km-t-page: clamp(2rem, 4vw, 3.5rem);
+  --km-t-h1: clamp(1.875rem, 3.2vw, 3rem);
+  --km-t-h2: clamp(1.625rem, 2.6vw, 2.25rem);
+  --km-t-h3: 1.75rem;
+  --km-t-h4: 1.375rem;
+  --km-t-h5: 1.125rem;
+  --km-t-h6: 1rem;
+
+  --km-t-body-lg: 1.125rem;
+  --km-t-body: 1rem;
+  --km-t-body-sm: 0.875rem;
+  --km-t-caption: 0.75rem;   /* smallest size in the entire system */
+  --km-t-nav: 0.8125rem;
+  --km-t-label: 0.6875rem;
+  --km-t-button: 0.875rem;
+  --km-t-form: 1rem;         /* 16px — prevents iOS input zoom */
+  --km-t-price: 1.0625rem;
+  --km-t-data: 0.8125rem;
+  --km-t-metric: 2rem;
+
+  --km-lh-tight: 0.88;
+  --km-lh-display: 0.96;
+  --km-lh-heading: 1.14;
+  --km-lh-body: 1.62;
+  --km-lh-ui: 1.35;
+
+  --km-ls-hero: -0.035em;
+  --km-ls-display: -0.02em;
+  --km-ls-heading: -0.012em;
+  --km-ls-nav: 0.1em;
+  --km-ls-label: 0.14em;
+
+  /* ---------------------------------------------------------------------
+     6 · SPACING — 4px base
+     --------------------------------------------------------------------- */
+  --km-s-1: 0.25rem;  --km-s-2: 0.5rem;   --km-s-3: 0.75rem;  --km-s-4: 1rem;
+  --km-s-5: 1.25rem;  --km-s-6: 1.5rem;   --km-s-8: 2rem;     --km-s-10: 2.5rem;
+  --km-s-12: 3rem;    --km-s-16: 4rem;    --km-s-20: 5rem;    --km-s-24: 6rem;
+  --km-s-30: 7.5rem;  --km-s-40: 10rem;
+
+  --km-section-y: clamp(4rem, 9vw, 10rem);
+  --km-section-y-tight: clamp(2.5rem, 5vw, 5rem);
+
+  /* ---------------------------------------------------------------------
+     7 · GRID
+     --------------------------------------------------------------------- */
+  --km-max: 1280px;
+  --km-max-wide: 1560px;
+  --km-max-read: 68ch;
+  --km-gutter: 1.5rem;
+  --km-margin: 5rem;
+
+  /* ---------------------------------------------------------------------
+     8 · RADIUS
+     UI radii stay small and consistent. The ARCH is the signature shape and
+     is reserved for image portals only — it is what makes a Kids Moda
+     composition recognisable without the logo.
+     --------------------------------------------------------------------- */
+  --km-r-xs: 2px;
+  --km-r-sm: 4px;
+  --km-r-md: 8px;
+  --km-r-lg: 12px;
+  --km-r-xl: 20px;
+  --km-r-2xl: 32px;
+  --km-r-pill: 999px;
+  --km-r-arch: 48% 48% var(--km-r-lg) var(--km-r-lg) / 34% 34% var(--km-r-lg) var(--km-r-lg);
+  --km-r-arch-soft: 34% 34% var(--km-r-lg) var(--km-r-lg) / 22% 22% var(--km-r-lg) var(--km-r-lg);
+
+  /* ---------------------------------------------------------------------
+     9 · ELEVATION — warm-tinted, restrained. One shadow per component, max.
+     --------------------------------------------------------------------- */
+  --km-e-1: 0 1px 2px rgb(26 23 25 / 0.05);
+  --km-e-2: 0 2px 8px -2px rgb(26 23 25 / 0.08);
+  --km-e-3: 0 8px 24px -8px rgb(26 23 25 / 0.12);
+  --km-e-4: 0 20px 48px -16px rgb(26 23 25 / 0.18);
+  --km-e-5: 0 32px 80px -24px rgb(26 23 25 / 0.28);
+
+  /* --------------------------------------------------------------------
+     10 · MOTION — every animation in the product names one of these
+     -------------------------------------------------------------------- */
+  --km-d-instant: 90ms;
+  --km-d-fast: 140ms;
+  --km-d-base: 220ms;
+  --km-d-slow: 360ms;
+  --km-d-xslow: 560ms;
+  --km-d-cinema: 900ms;
+  --km-d-reveal: 1200ms;
+
+  --km-e-standard: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --km-e-entrance: cubic-bezier(0.16, 1, 0.3, 1);
+  --km-e-exit: cubic-bezier(0.7, 0, 0.84, 0);
+  --km-e-emphasis: cubic-bezier(0.65, 0, 0.35, 1);
+  --km-e-silk: cubic-bezier(0.4, 0, 0.1, 1);
+  --km-e-ribbon: cubic-bezier(0.37, 0, 0.15, 1);
+
+  --km-stagger: 70ms;
+
+  /* --------------------------------------------------------------------
+     11 · LAYERS
+     -------------------------------------------------------------------- */
+  --km-z-sticky: 100;
+  --km-z-header: 200;
+  --km-z-drawer: 300;
+  --km-z-modal: 400;
+  --km-z-toast: 500;
+  --km-z-opening: 900;
+
+  /* --------------------------------------------------------------------
+     12 · IMAGE RATIOS — the only ratios permitted in the product
+     -------------------------------------------------------------------- */
+  --km-ar-portrait: 3 / 4;
+  --km-ar-tall: 2 / 3;
+  --km-ar-hero: 16 / 9;
+  --km-ar-hero-m: 4 / 5;
+  --km-ar-square: 1 / 1;
+  --km-ar-wide: 21 / 9;
+  --km-ar-editorial: 5 / 4;
+}
+
+/* Tablet — 768–1199 */
+@media (max-width: 1199px) {
+  :root { --km-margin: 2.5rem; --km-gutter: 1.25rem; }
+}
+
+/* Mobile — 320–767. Re-proportioned, never scaled down. */
+@media (max-width: 767px) {
+  :root {
+    --km-margin: 1.25rem;
+    --km-gutter: 1rem;
+    --km-section-y: clamp(3rem, 12vw, 4.5rem);
+    --km-ls-hero: -0.028em;
+    --km-e-4: 0 12px 28px -12px rgb(26 23 25 / 0.16);
+  }
+}
+
+/* ==========================================================================
+   REDUCED MOTION — global contract.
+   Cinematic motion collapses to opacity cross-fades. Nothing is ever hidden
+   from a reduced-motion user; reveals resolve to their final state instantly.
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --km-d-cinema: 140ms;
+    --km-d-reveal: 140ms;
+    --km-d-xslow: 140ms;
+    --km-d-slow: 140ms;
+    --km-stagger: 0ms;
+    --km-e-ribbon: linear;
+  }
+}

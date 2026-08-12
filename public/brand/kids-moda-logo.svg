@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 132" role="img" aria-label="Kids Moda — Fashion for Little Moments" class="km-logo">
+  <title>KIDS MODA</title>
+  <defs>
+    <clipPath id="kmClip"><rect x="0" y="0" width="520" height="132"/></clipPath>
+  </defs>
+
+  <!-- Ribbon arc: the brand's living rainbow, drawn as fabric not as a rainbow icon -->
+  <g clip-path="url(#kmClip)" class="km-logo__ribbon">
+    <path class="km-logo__band" data-band="1" d="M18 96 C 96 30, 200 22, 268 46" fill="none" stroke="#F2684F" stroke-width="5" stroke-linecap="round"/>
+    <path class="km-logo__band" data-band="2" d="M18 104 C 100 42, 208 34, 280 58" fill="none" stroke="#F08A2E" stroke-width="5" stroke-linecap="round"/>
+    <path class="km-logo__band" data-band="3" d="M18 112 C 104 54, 216 46, 292 70" fill="none" stroke="#F2C744" stroke-width="5" stroke-linecap="round"/>
+    <path class="km-logo__band" data-band="4" d="M232 116 C 300 62, 404 54, 502 78" fill="none" stroke="#6E9B7A" stroke-width="5" stroke-linecap="round"/>
+    <path class="km-logo__band" data-band="5" d="M244 124 C 312 72, 414 64, 502 88" fill="none" stroke="#63B3D9" stroke-width="5" stroke-linecap="round"/>
+    <path class="km-logo__band" data-band="6" d="M256 132 C 324 82, 424 74, 502 98" fill="none" stroke="#A38AD1" stroke-width="5" stroke-linecap="round"/>
+  </g>
+
+  <!-- Wordmark: Fraunces-derived editorial caps, wide tracking -->
+  <g class="km-logo__word" fill="#1A1719">
+    <text x="0" y="72" font-family="Fraunces, Recoleta, Georgia, serif" font-size="70" font-weight="600"
+          letter-spacing="2" >KIDS</text>
+    <text x="228" y="72" font-family="Fraunces, Recoleta, Georgia, serif" font-size="70" font-weight="300"
+          font-style="italic" letter-spacing="1">MODA</text>
+  </g>
+</svg>
